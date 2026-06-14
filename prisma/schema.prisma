@@ -1,0 +1,295 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Rol {
+  ADMIN
+  ASISTENTE
+}
+
+enum TipoTratamiento {
+  MASAJES
+  REHABILITACION
+  DRENAJE_LINFATICO
+  DRENAJE_BOTAS
+  DRENAJE_KINE
+  HIPOPRESIVOS
+}
+
+enum EstadoTurno {
+  PENDIENTE
+  CONFIRMADO
+  PRESENTE
+  AUSENTE
+  CANCELADO
+}
+
+enum FormaPago {
+  EFECTIVO
+  TRANSFERENCIA
+  OBRA_SOCIAL
+  MUTUAL
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PAGADO
+  PARCIAL
+}
+
+enum EstadoPacienteGym {
+  ACTIVO
+  INACTIVO
+  VACACIONES
+}
+
+enum EstadoRutina {
+  ACTIVA
+  VENCIDA
+}
+
+enum EtapaRutina {
+  ENTRADA_CALOR
+  PRIMERA_ETAPA
+  SEGUNDA_ETAPA
+  TERCERA_ETAPA
+  TRABAJO_FINAL
+}
+
+enum NivelEjercicio {
+  BAJO
+  MEDIO
+  ALTO
+}
+
+enum FuenteImagen {
+  BANCO
+  SUBIDA
+}
+
+enum EstadoAsistencia {
+  PRESENTE
+  AUSENTE
+  TARDE
+  JUSTIFICO
+}
+
+enum EstadoCuotaGym {
+  PENDIENTE
+  PAGADO
+  VENCIDO
+}
+
+// ─── Usuarios ─────────────────────────────────────────────────────────────────
+
+model Usuario {
+  id           String   @id @default(cuid())
+  nombre       String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  rol          Rol      @default(ASISTENTE)
+  activo       Boolean  @default(true)
+  creadoEn     DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  turnosCreados    Turno[]     @relation("TurnoCreador")
+  rutinasCreadas   Rutina[]    @relation("RutinaCreador")
+
+  @@map("usuarios")
+}
+
+// ─── Kinesiología — Pacientes ─────────────────────────────────────────────────
+
+model PacienteKine {
+  id              String            @id @default(cuid())
+  nombre          String
+  dni             String            @unique
+  fechaNacimiento DateTime?         @map("fecha_nacimiento")
+  telefono        String?
+  email           String?
+  obraSocial      String?           @map("obra_social")
+  nroAfiliado     String?           @map("nro_afiliado")
+  diagnostico     String?           @db.Text
+  tratamientos    TipoTratamiento[]
+  observaciones   String?           @db.Text
+  activo          Boolean           @default(true)
+  creadoEn        DateTime          @default(now()) @map("creado_en")
+  actualizadoEn   DateTime          @updatedAt @map("actualizado_en")
+
+  turnos    Turno[]
+  cobros    CobroKine[]
+
+  @@map("pacientes_kine")
+}
+
+// ─── Kinesiología — Turnos ────────────────────────────────────────────────────
+
+model Turno {
+  id              String          @id @default(cuid())
+  pacienteId      String          @map("paciente_id")
+  paciente        PacienteKine    @relation(fields: [pacienteId], references: [id])
+  fecha           DateTime        @db.Date
+  horaInicio      DateTime        @map("hora_inicio") @db.Time
+  horaFin         DateTime        @map("hora_fin") @db.Time
+  tipoTratamiento TipoTratamiento @map("tipo_tratamiento")
+  usaBotas        Boolean         @default(false) @map("usa_botas")
+  estado          EstadoTurno     @default(PENDIENTE)
+  notas           String?         @db.Text
+  creadoPorId     String          @map("creado_por_id")
+  creadoPor       Usuario         @relation("TurnoCreador", fields: [creadoPorId], references: [id])
+  creadoEn        DateTime        @default(now()) @map("creado_en")
+  actualizadoEn   DateTime        @updatedAt @map("actualizado_en")
+
+  cobro CobroKine?
+
+  @@map("turnos")
+}
+
+// ─── Kinesiología — Cobros ────────────────────────────────────────────────────
+
+model CobroKine {
+  id          String     @id @default(cuid())
+  turnoId     String     @unique @map("turno_id")
+  turno       Turno      @relation(fields: [turnoId], references: [id])
+  pacienteId  String     @map("paciente_id")
+  paciente    PacienteKine @relation(fields: [pacienteId], references: [id])
+  importe     Decimal    @db.Decimal(10, 2)
+  formaPago   FormaPago  @map("forma_pago")
+  estado      EstadoPago @default(PENDIENTE)
+  fechaPago   DateTime?  @map("fecha_pago") @db.Date
+  nroRecibo   Int?       @map("nro_recibo") @default(autoincrement())
+  notas       String?    @db.Text
+  creadoEn    DateTime   @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@map("cobros_kine")
+}
+
+// ─── Gimnasio — Pacientes ─────────────────────────────────────────────────────
+
+model PacienteGym {
+  id                   String            @id @default(cuid())
+  nombre               String
+  fechaNacimiento      DateTime?         @map("fecha_nacimiento")
+  telefono             String?
+  contactoEmergencia   String?           @map("contacto_emergencia")
+  obraSocial           String?           @map("obra_social")
+  observacionesMedicas String?           @db.Text @map("observaciones_medicas")
+  diasAsignados        String[]          @map("dias_asignados")
+  fechaInicio          DateTime          @default(now()) @map("fecha_inicio") @db.Date
+  estado               EstadoPacienteGym @default(ACTIVO)
+  creadoEn             DateTime          @default(now()) @map("creado_en")
+  actualizadoEn        DateTime          @updatedAt @map("actualizado_en")
+
+  rutinas      Rutina[]
+  asistencias  AsistenciaGym[]
+  cobros       CobroGym[]
+
+  @@map("pacientes_gym")
+}
+
+// ─── Gimnasio — Biblioteca de Ejercicios ──────────────────────────────────────
+
+model Ejercicio {
+  id                   String         @id @default(cuid())
+  nombre               String
+  descripcion          String?        @db.Text
+  grupoMuscular        String?        @map("grupo_muscular")
+  nivel                NivelEjercicio @default(MEDIO)
+  contraindicaciones   String?        @db.Text
+  imagenUrl            String?        @map("imagen_url")
+  imagenFuente         FuenteImagen?  @map("imagen_fuente")
+  activo               Boolean        @default(true)
+  creadoEn             DateTime       @default(now()) @map("creado_en")
+  actualizadoEn        DateTime       @updatedAt @map("actualizado_en")
+
+  ejerciciosRutina EjercicioRutina[]
+
+  @@map("biblioteca_ejercicios")
+}
+
+// ─── Gimnasio — Rutinas ───────────────────────────────────────────────────────
+
+model Rutina {
+  id               String       @id @default(cuid())
+  pacienteGymId    String       @map("paciente_gym_id")
+  pacienteGym      PacienteGym  @relation(fields: [pacienteGymId], references: [id])
+  fechaInicio      DateTime     @map("fecha_inicio") @db.Date
+  fechaVencimiento DateTime     @map("fecha_vencimiento") @db.Date
+  estado           EstadoRutina @default(ACTIVA)
+  creadoPorId      String       @map("creado_por_id")
+  creadoPor        Usuario      @relation("RutinaCreador", fields: [creadoPorId], references: [id])
+  creadoEn         DateTime     @default(now()) @map("creado_en")
+  actualizadoEn    DateTime     @updatedAt @map("actualizado_en")
+
+  ejercicios EjercicioRutina[]
+
+  @@map("rutinas")
+}
+
+// ─── Gimnasio — Ejercicios dentro de la Rutina ────────────────────────────────
+
+model EjercicioRutina {
+  id          String      @id @default(cuid())
+  rutinaId    String      @map("rutina_id")
+  rutina      Rutina      @relation(fields: [rutinaId], references: [id], onDelete: Cascade)
+  ejercicioId String?     @map("ejercicio_id")
+  ejercicio   Ejercicio?  @relation(fields: [ejercicioId], references: [id])
+  nombreLibre String?     @map("nombre_libre")
+  etapa       EtapaRutina
+  seriesS1    Int?        @map("series_s1")
+  repsS1      Int?        @map("reps_s1")
+  seriesS2    Int?        @map("series_s2")
+  repsS2      Int?        @map("reps_s2")
+  seriesS3    Int?        @map("series_s3")
+  repsS3      Int?        @map("reps_s3")
+  seriesS4    Int?        @map("series_s4")
+  repsS4      Int?        @map("reps_s4")
+  notas       String?     @db.Text
+  orden       Int         @default(0)
+
+  @@map("ejercicios_rutina")
+}
+
+// ─── Gimnasio — Asistencias ───────────────────────────────────────────────────
+
+model AsistenciaGym {
+  id            String           @id @default(cuid())
+  pacienteGymId String           @map("paciente_gym_id")
+  pacienteGym   PacienteGym      @relation(fields: [pacienteGymId], references: [id])
+  fecha         DateTime         @db.Date
+  estado        EstadoAsistencia @default(PRESENTE)
+  semanaCiclo   Int              @map("semana_ciclo")
+  observaciones String?          @db.Text
+  creadoEn      DateTime         @default(now()) @map("creado_en")
+
+  @@unique([pacienteGymId, fecha])
+  @@map("asistencias_gym")
+}
+
+// ─── Gimnasio — Cobros ────────────────────────────────────────────────────────
+
+model CobroGym {
+  id            String         @id @default(cuid())
+  pacienteGymId String         @map("paciente_gym_id")
+  pacienteGym   PacienteGym    @relation(fields: [pacienteGymId], references: [id])
+  periodoMes    Int            @map("periodo_mes")
+  periodoAnio   Int            @map("periodo_anio")
+  importe       Decimal        @db.Decimal(10, 2)
+  formaPago     FormaPago      @map("forma_pago")
+  estado        EstadoCuotaGym @default(PENDIENTE)
+  fechaPago     DateTime?      @map("fecha_pago") @db.Date
+  notas         String?        @db.Text
+  creadoEn      DateTime       @default(now()) @map("creado_en")
+  actualizadoEn DateTime       @updatedAt @map("actualizado_en")
+
+  @@unique([pacienteGymId, periodoMes, periodoAnio])
+  @@map("cobros_gym")
+}
