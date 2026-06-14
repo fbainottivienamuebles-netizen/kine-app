@@ -1,8 +1,7 @@
-import jwt from "jsonwebtoken";
+import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
 const COOKIE_NAME = "kineapp_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 días
 
@@ -13,13 +12,21 @@ export type JwtPayload = {
   nombre: string;
 };
 
-export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+function getSecret() {
+  return new TextEncoder().encode(process.env.JWT_SECRET!);
 }
 
-export function verifyToken(token: string): JwtPayload | null {
+export async function signToken(payload: JwtPayload): Promise<string> {
+  return new SignJWT({ ...payload })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("7d")
+    .sign(getSecret());
+}
+
+export async function verifyToken(token: string): Promise<JwtPayload | null> {
   try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const { payload } = await jwtVerify(token, getSecret());
+    return payload as unknown as JwtPayload;
   } catch {
     return null;
   }
@@ -29,10 +36,7 @@ export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
 }
 
-export async function verifyPassword(
-  password: string,
-  hash: string
-): Promise<boolean> {
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
 

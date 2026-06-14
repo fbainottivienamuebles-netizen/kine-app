@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Credenciales incorrectas" }, { status: 401 });
   }
 
-  const token = signToken({
+  const token = await signToken({
     userId: usuario.id,
     email: usuario.email,
     rol: usuario.rol as "ADMIN" | "ASISTENTE",

@@ -1,25 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
+import { jwtVerify } from "jose";
 
 const PUBLIC_PATHS = ["/login", "/api/auth/login"];
 
-export function middleware(request: NextRequest) {
+async function isAuthenticated(request: NextRequest): Promise<boolean> {
+  const token = request.cookies.get("kineapp_token")?.value;
+  if (!token) return false;
+  try {
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
+    await jwtVerify(token, secret);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/api/")) {
-    const token = request.cookies.get("kineapp_token")?.value;
-    if (!token || !verifyToken(token)) {
+  if (!(await isAuthenticated(request))) {
+    if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
-    return NextResponse.next();
-  }
-
-  const token = request.cookies.get("kineapp_token")?.value;
-  if (!token || !verifyToken(token)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
