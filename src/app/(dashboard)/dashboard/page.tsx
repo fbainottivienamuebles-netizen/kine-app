@@ -2,15 +2,7 @@ import { getSession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
 import { Calendar, Dumbbell, AlertTriangle, DollarSign } from "lucide-react";
 import Link from "next/link";
-
-const ETIQUETAS_TRATAMIENTO: Record<string, string> = {
-  MASAJES: "Masajes",
-  REHABILITACION: "Rehabilitación",
-  DRENAJE_LINFATICO: "Drenaje linfático",
-  DRENAJE_BOTAS: "Drenaje botas",
-  DRENAJE_KINE: "Drenaje kine",
-  HIPOPRESIVOS: "Hipopresivos",
-};
+import { AgendaDelDia, type TurnoHoy } from "@/components/dashboard/agenda-del-dia";
 
 const DIAS_ES = ["DOMINGO", "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"];
 
@@ -38,22 +30,21 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("turnos")
-      .select("id, hora_inicio, hora_fin, tipo_tratamiento, estado, usa_botas, paciente:pacientes(id, nombre, dni)")
+      .select("id, hora_inicio, hora_fin, tipo_tratamiento, estado, usa_botas, notas, paciente:pacientes(id, nombre, dni)")
       .eq("fecha", today)
       .not("estado", "in", "(CANCELADO)")
       .order("hora_inicio", { ascending: true }),
 
     supabase
       .from("pacientes")
-      .select("id, nombre, telefono, dias_asignados, estado_gym")
+      .select("id")
       .eq("activo_gym", true)
       .eq("estado_gym", "ACTIVO")
-      .contains("dias_asignados", [diaNombre])
-      .order("nombre", { ascending: true }),
+      .contains("dias_asignados", [diaNombre]),
 
     supabase
       .from("rutinas")
-      .select("id, fecha_vencimiento, paciente:pacientes(id, nombre)")
+      .select("id, fecha_inicio, fecha_vencimiento, paciente:pacientes(id, nombre)")
       .eq("estado", "ACTIVA")
       .gte("fecha_vencimiento", today)
       .lte("fecha_vencimiento", hasta7)
@@ -71,14 +62,26 @@ export default async function DashboardPage() {
     (t) => !(t.cobro as unknown as Array<unknown>)?.length
   );
 
-  const totalTurnos = turnosHoy?.length ?? 0;
-  const totalGym = gymHoy?.length ?? 0;
-  const totalRutinas = rutinasVencer?.length ?? 0;
+  const totalTurnos    = turnosHoy?.length ?? 0;
+  const totalGym       = gymHoy?.length ?? 0;
+  const totalRutinas   = rutinasVencer?.length ?? 0;
   const totalPendientes = turnosSinCobro.length;
 
+  const turnosParaAgenda: TurnoHoy[] = (turnosHoy ?? []).map((t) => ({
+    id: t.id,
+    hora_inicio: String(t.hora_inicio),
+    hora_fin: String(t.hora_fin),
+    tipo_tratamiento: t.tipo_tratamiento,
+    estado: t.estado,
+    usa_botas: t.usa_botas,
+    notas: t.notas ?? null,
+    paciente: t.paciente as unknown as { id: string; nombre: string; dni: string } | null,
+  }));
+
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="mb-6">
+    <div className="max-w-2xl mx-auto">
+      {/* Header saludo */}
+      <div className="mb-5">
         <h1 className="text-2xl font-bold text-[#0F172A]">
           Hola, {session?.nombre?.split(" ")[0]} 👋
         </h1>
@@ -87,193 +90,151 @@ export default async function DashboardPage() {
             weekday: "long",
             day: "numeric",
             month: "long",
-            year: "numeric",
             timeZone: "America/Argentina/Buenos_Aires",
           })}
         </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-8">
-        <StatCard
-          icon={<Calendar className="w-5 h-5 text-[#0EA5E9]" />}
-          titulo="Turnos hoy"
-          valor={totalTurnos}
-          subtitulo="Kinesiología"
-          iconBg="bg-[#F0F9FF]"
-        />
-        <StatCard
-          icon={<Dumbbell className="w-5 h-5 text-[#8B5CF6]" />}
-          titulo="Gym hoy"
-          valor={totalGym}
-          subtitulo="Pacientes esperados"
-          iconBg="bg-[#F5F3FF]"
-        />
-        <StatCard
-          icon={<AlertTriangle className="w-5 h-5 text-[#F59E0B]" />}
-          titulo="Rutinas por vencer"
-          valor={totalRutinas}
-          subtitulo="Próximos 7 días"
-          iconBg="bg-[#FFFBEB]"
-        />
-        <StatCard
-          icon={<DollarSign className="w-5 h-5 text-[#10B981]" />}
-          titulo="Cobros pendientes"
-          valor={totalPendientes}
-          subtitulo="Turnos sin cobrar"
-          iconBg="bg-[#ECFDF5]"
-        />
+      {/* 1. Agenda del día — protagonista */}
+      <div className="mb-4">
+        <AgendaDelDia turnos={turnosParaAgenda} today={today} />
       </div>
 
-      {/* Secciones */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* 2. Rutinas a renovar */}
+      {rutinasVencer && rutinasVencer.length > 0 && (
+        <div className="mb-4">
+          <RutinasARenovar rutinas={rutinasVencer} today={today} />
+        </div>
+      )}
 
-        {/* Turnos de hoy */}
-        <SectionCard titulo="Turnos de hoy" enlace="/kine/agenda" accent="#0EA5E9">
-          {!turnosHoy || turnosHoy.length === 0 ? (
-            <EmptyState mensaje="Sin turnos agendados para hoy" />
-          ) : (
-            <ul className="space-y-2">
-              {turnosHoy.map((t) => {
-                const paciente = t.paciente as unknown as { nombre: string; dni: string } | null;
-                return (
-                  <li key={t.id} className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-[#64748B] w-11 shrink-0">
-                      {String(t.hora_inicio).slice(0, 5)}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#0F172A] truncate">{paciente?.nombre ?? "—"}</p>
-                      <p className="text-xs text-[#94A3B8]">{ETIQUETAS_TRATAMIENTO[t.tipo_tratamiento] ?? t.tipo_tratamiento}</p>
-                    </div>
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${
-                      t.estado === "PRESENTE" ? "bg-emerald-50 text-emerald-700" :
-                      t.estado === "CONFIRMADO" ? "bg-blue-50 text-blue-700" :
-                      "bg-gray-100 text-gray-500"
-                    }`}>
-                      {t.estado === "PENDIENTE" ? "Pendiente" : t.estado === "CONFIRMADO" ? "Confirmado" : t.estado === "PRESENTE" ? "Presente" : t.estado}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </SectionCard>
+      {/* 3. Métricas compactas */}
+      <div className="grid grid-cols-4 gap-2 mb-4">
+        <MetricaMini icon={<Calendar className="w-4 h-4 text-[#0EA5E9]" />} valor={totalTurnos}    label="Turnos" />
+        <MetricaMini icon={<Dumbbell className="w-4 h-4 text-[#8B5CF6]" />} valor={totalGym}       label="Gym" />
+        <MetricaMini icon={<AlertTriangle className="w-4 h-4 text-[#F59E0B]" />} valor={totalRutinas} label="Rutinas" />
+        <MetricaMini icon={<DollarSign className="w-4 h-4 text-[#10B981]" />} valor={totalPendientes} label="Cobros" />
+      </div>
 
-        {/* Gym hoy */}
-        <SectionCard titulo={`Clase de hoy — Gimnasio`} enlace="/gym/asistencias" accent="#8B5CF6">
-          {!gymHoy || gymHoy.length === 0 ? (
-            <EmptyState mensaje={`No hay miembros asignados para hoy (${diaNombre.charAt(0) + diaNombre.slice(1).toLowerCase()})`} />
-          ) : (
-            <ul className="space-y-2">
-              {gymHoy.map((p) => (
-                <li key={p.id} className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-[#F5F3FF] flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-[#8B5CF6]">{p.nombre.charAt(0)}</span>
+      {/* 4. Cobros pendientes */}
+      <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#F1F5F9]">
+          <h2 className="font-bold text-[#0F172A] text-base">💰 Cobros pendientes</h2>
+          <Link href="/kine/cobranza" className="text-xs font-medium text-[#0EA5E9]">
+            Ver todo →
+          </Link>
+        </div>
+        {turnosSinCobro.length === 0 ? (
+          <div className="p-5 text-center">
+            <p className="text-sm text-emerald-600">✓ Sin cobros pendientes</p>
+          </div>
+        ) : (
+          <div className="p-3 space-y-1">
+            {turnosSinCobro.slice(0, 3).map((t) => {
+              const pac = t.paciente as unknown as { nombre: string } | null;
+              return (
+                <div key={t.id} className="flex items-center justify-between gap-2 py-1.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[#0F172A] truncate">{pac?.nombre ?? "—"}</p>
+                    <p className="text-xs text-[#94A3B8]">
+                      {t.fecha} · {String(t.hora_inicio).slice(0, 5)}
+                    </p>
                   </div>
-                  <p className="text-sm font-medium text-[#0F172A] truncate">{p.nombre}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </SectionCard>
-
-        {/* Rutinas por renovar */}
-        <SectionCard titulo="Rutinas por renovar" enlace="/gym/rutinas" accent="#8B5CF6">
-          {!rutinasVencer || rutinasVencer.length === 0 ? (
-            <EmptyState mensaje="Sin rutinas por vencer esta semana" />
-          ) : (
-            <ul className="space-y-2">
-              {rutinasVencer.map((r) => {
-                const paciente = r.paciente as unknown as { nombre: string } | null;
-                const vence = new Date(r.fecha_vencimiento + "T12:00:00");
-                const diasRestantes = Math.ceil((vence.getTime() - new Date(today + "T12:00:00").getTime()) / (1000 * 60 * 60 * 24));
-                return (
-                  <li key={r.id} className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-[#0F172A] truncate">{paciente?.nombre ?? "—"}</p>
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${
-                      diasRestantes <= 2 ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"
-                    }`}>
-                      {diasRestantes === 0 ? "Vence hoy" : diasRestantes === 1 ? "Vence mañana" : `${diasRestantes} días`}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </SectionCard>
-
-        {/* Cobros pendientes */}
-        <SectionCard titulo="Cobros pendientes" enlace="/kine/cobranza" accent="#0EA5E9">
-          {turnosSinCobro.length === 0 ? (
-            <EmptyState mensaje="Sin cobros pendientes" />
-          ) : (
-            <ul className="space-y-2">
-              {turnosSinCobro.slice(0, 6).map((t) => {
-                const paciente = t.paciente as unknown as { nombre: string } | null;
-                return (
-                  <li key={t.id} className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-[#0F172A] truncate">{paciente?.nombre ?? "—"}</p>
-                      <p className="text-xs text-[#94A3B8]">{t.fecha} · {String(t.hora_inicio).slice(0, 5)}</p>
-                    </div>
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-600 shrink-0">Sin cobrar</span>
-                  </li>
-                );
-              })}
-              {turnosSinCobro.length > 6 && (
-                <li className="text-xs text-[#94A3B8] text-center pt-1">
-                  +{turnosSinCobro.length - 6} más →
-                </li>
-              )}
-            </ul>
-          )}
-        </SectionCard>
-
+                  <span className="text-[11px] font-medium px-2 py-1 rounded-full bg-red-50 text-red-600 shrink-0">
+                    Sin cobrar
+                  </span>
+                </div>
+              );
+            })}
+            {turnosSinCobro.length > 3 && (
+              <Link
+                href="/kine/cobranza"
+                className="block text-center text-xs text-[#0EA5E9] font-medium pt-2 pb-1"
+              >
+                +{turnosSinCobro.length - 3} más → Ver todo
+              </Link>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function StatCard({ icon, titulo, valor, subtitulo, iconBg }: {
-  icon: React.ReactNode;
-  titulo: string;
-  valor: string | number;
-  subtitulo: string;
-  iconBg: string;
-}) {
-  return (
-    <div className="bg-white rounded-[16px] border border-[#E2E8F0] p-4 shadow-sm">
-      <div className={`${iconBg} w-10 h-10 rounded-[10px] flex items-center justify-center mb-3`}>
-        {icon}
-      </div>
-      <p className="text-xs text-[#64748B] font-medium">{titulo}</p>
-      <p className="text-2xl font-bold text-[#0F172A] mt-0.5">{valor}</p>
-      <p className="text-xs text-[#94A3B8] mt-0.5">{subtitulo}</p>
-    </div>
-  );
-}
+type RutinaConFechas = {
+  id: string;
+  fecha_inicio: string;
+  fecha_vencimiento: string;
+  paciente: unknown;
+};
 
-function SectionCard({ titulo, enlace, accent, children }: {
-  titulo: string;
-  enlace: string;
-  accent: string;
-  children: React.ReactNode;
-}) {
+function RutinasARenovar({ rutinas, today }: { rutinas: RutinaConFechas[]; today: string }) {
   return (
     <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[#F1F5F9]">
-        <h2 className="font-semibold text-[#0F172A] text-sm">{titulo}</h2>
-        <Link href={enlace} className="text-xs font-medium transition-colors" style={{ color: accent }}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#F1F5F9]">
+        <h2 className="font-bold text-[#0F172A] text-base">🏋️ Rutinas a renovar</h2>
+        <Link href="/gym/rutinas" className="text-xs font-medium text-[#8B5CF6]">
           Ver todo →
         </Link>
       </div>
-      <div className="p-5">{children}</div>
+      <div className="p-3 flex flex-col gap-2">
+        {rutinas.map((r) => {
+          const pac = r.paciente as { nombre: string } | null;
+          const venc = new Date(r.fecha_vencimiento + "T23:59:59");
+          const hoyDt = new Date(today + "T12:00:00");
+          const dias = Math.ceil((venc.getTime() - hoyDt.getTime()) / (1000 * 60 * 60 * 24));
+          const inicioRutina = new Date(r.fecha_inicio + "T00:00:00");
+          const semana = Math.min(Math.max(Math.floor((hoyDt.getTime() - inicioRutina.getTime()) / (1000 * 60 * 60 * 24 * 7)) + 1, 1), 4);
+
+          const urgencia =
+            dias <= 2
+              ? { franja: "#EF4444", fondo: "#FEE2E2", texto: "#DC2626" }
+              : dias <= 5
+              ? { franja: "#F59E0B", fondo: "#FEF3C7", texto: "#D97706" }
+              : { franja: "#EAB308", fondo: "#FEF9C3", texto: "#A16207" };
+
+          const labelDias =
+            dias <= 0
+              ? "⚠️ Vencida"
+              : dias === 1
+              ? "⚠️ Vence mañana"
+              : `⚠️ Vence en ${dias} días`;
+
+          return (
+            <div
+              key={r.id}
+              className="flex rounded-[10px] overflow-hidden"
+              style={{ minHeight: "56px", border: `1px solid ${urgencia.franja}30` }}
+            >
+              <div style={{ width: 6, backgroundColor: urgencia.franja, flexShrink: 0 }} />
+              <div
+                className="flex-1 px-3 py-2 flex items-center justify-between gap-2"
+                style={{ backgroundColor: urgencia.fondo }}
+              >
+                <div>
+                  <p className="font-semibold text-[#1E293B] text-sm">🏋️ {pac?.nombre ?? "—"}</p>
+                  <p className="text-xs text-[#64748B] mt-0.5">Semana {semana} de 4</p>
+                </div>
+                <span
+                  className="text-[11px] font-bold px-2 py-1 rounded-full shrink-0 bg-white"
+                  style={{ color: urgencia.texto }}
+                >
+                  {labelDias}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function EmptyState({ mensaje }: { mensaje: string }) {
+function MetricaMini({ icon, valor, label }: { icon: React.ReactNode; valor: number; label: string }) {
   return (
-    <p className="text-sm text-[#94A3B8] text-center py-4">{mensaje}</p>
+    <div className="bg-white rounded-[12px] border border-[#E2E8F0] p-2.5 text-center shadow-sm">
+      <div className="flex justify-center mb-1">{icon}</div>
+      <p className="text-xl font-bold text-[#0F172A] leading-none">{valor}</p>
+      <p className="text-[10px] text-[#94A3B8] mt-1">{label}</p>
+    </div>
   );
 }
