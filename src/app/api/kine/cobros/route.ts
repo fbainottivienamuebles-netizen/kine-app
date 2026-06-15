@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     .from("turnos")
     .select(`
       id, fecha, hora_inicio, tipo_tratamiento, estado, usa_botas,
-      paciente:pacientes_kine(id, nombre, dni),
+      paciente:pacientes(id, nombre, dni),
       cobro:cobros_kine(id, importe, forma_pago, estado, fecha_pago, nro_recibo, notas)
     `)
     .not("estado", "in", "(CANCELADO,AUSENTE)")

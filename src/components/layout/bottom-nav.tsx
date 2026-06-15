@@ -14,12 +14,11 @@ const MAIN_ITEMS = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/kine/agenda", label: "Agenda", icon: Calendar },
   { href: "/gym/asistencias", label: "Clases", icon: CheckSquare },
-  { href: "/kine/pacientes", label: "Pacientes", icon: Users },
+  { href: "/pacientes", label: "Pacientes", icon: Users },
 ];
 
 const MORE_ITEMS = [
   { href: "/kine/cobranza", label: "Cobranza Kine", icon: DollarSign },
-  { href: "/gym/pacientes", label: "Miembros Gym", icon: Users },
   { href: "/gym/rutinas", label: "Rutinas", icon: ClipboardList },
   { href: "/gym/biblioteca", label: "Biblioteca", icon: BookOpen },
   { href: "/gym/cobranza", label: "Cobranza Gym", icon: DollarSign },

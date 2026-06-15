@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { ETIQUETAS_TRATAMIENTO, ETIQUETAS_ESTADO_TURNO } from "@/lib/utils";
 
-type Paciente = { id: string; nombre: string; dni: string };
+type Paciente = { id: string; nombre: string; dni: string | null };
 
 type Turno = {
   id: string;
@@ -111,7 +111,7 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
   }, [isOpen, turno, initialDate, initialHoraInicio, initialHoraFin]);
 
   const pacientesFiltrados = busqueda
-    ? pacientes.filter((p) => p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.dni.includes(busqueda))
+    ? pacientes.filter((p) => p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || (p.dni ?? "").includes(busqueda))
     : pacientes;
 
   const pacienteSeleccionado = pacientes.find((p) => p.id === pacienteId);
@@ -173,7 +173,7 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
             {pacienteSeleccionado ? (
               <div className="flex items-center justify-between px-3 py-2 bg-indigo-50 rounded-xl border border-indigo-200">
                 <span className="text-sm font-medium text-indigo-900">
-                  {pacienteSeleccionado.nombre} <span className="font-normal text-indigo-600">— DNI {pacienteSeleccionado.dni}</span>
+                  {pacienteSeleccionado.nombre}{pacienteSeleccionado.dni && <span className="font-normal text-indigo-600"> — DNI {pacienteSeleccionado.dni}</span>}
                 </span>
                 <button type="button" onClick={() => { setPacienteId(""); setBusqueda(""); }} className="text-xs text-indigo-500 hover:text-indigo-700">Cambiar</button>
               </div>
@@ -200,7 +200,7 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
                         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
                       >
                         <span className="font-medium text-gray-900">{p.nombre}</span>
-                        <span className="text-gray-500 ml-2">DNI {p.dni}</span>
+                        {p.dni && <span className="text-gray-500 ml-2">DNI {p.dni}</span>}
                       </button>
                     ))}
                   </div>

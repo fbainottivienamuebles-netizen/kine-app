@@ -15,14 +15,16 @@ type NavItem = {
   soloAdmin?: boolean;
 };
 
+const navPacientes: NavItem[] = [
+  { href: "/pacientes", label: "Pacientes", icon: Users },
+];
+
 const navKine: NavItem[] = [
   { href: "/kine/agenda", label: "Agenda", icon: Calendar },
-  { href: "/kine/pacientes", label: "Pacientes", icon: Users },
   { href: "/kine/cobranza", label: "Cobranza", icon: DollarSign },
 ];
 
 const navGym: NavItem[] = [
-  { href: "/gym/pacientes", label: "Miembros", icon: Users },
   { href: "/gym/asistencias", label: "Asistencias", icon: CheckSquare },
   { href: "/gym/rutinas", label: "Rutinas", icon: ClipboardList },
   { href: "/gym/biblioteca", label: "Biblioteca", icon: BookOpen },
@@ -104,6 +106,7 @@ export function Sidebar({ rol, usuario }: { rol: string; usuario: JwtPayload }) 
             />
           </ul>
         </div>
+        <NavSection title="Pacientes" items={navPacientes} rol={rol} pathname={pathname} />
         <NavSection title="Kinesiología" items={navKine} rol={rol} pathname={pathname} />
         <NavSection title="Gimnasio" items={navGym} rol={rol} pathname={pathname} />
         <NavSection title="Administración" items={navAdmin} rol={rol} pathname={pathname} />

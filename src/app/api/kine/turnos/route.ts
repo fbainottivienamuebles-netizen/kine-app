@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("turnos")
-    .select("*, paciente:pacientes_kine(id, nombre, dni)")
+    .select("*, paciente:pacientes(id, nombre, dni)")
     .gte("fecha", desde)
     .lte("fecha", hasta)
     .order("fecha", { ascending: true })
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       notas: notas || null,
       creado_por_id: session.userId,
     })
-    .select("*, paciente:pacientes_kine(id, nombre, dni)")
+    .select("*, paciente:pacientes(id, nombre, dni)")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     .from("rutinas")
     .select(`
       id, fecha_inicio, fecha_vencimiento, estado,
-      paciente:pacientes_gym(id, nombre, dias_asignados),
+      paciente:pacientes(id, nombre, dias_asignados),
       ejercicios:ejercicios_rutina(
         id, ejercicio_id, nombre_libre, etapa, orden,
         series_s1, reps_s1, series_s2, reps_s2,
@@ -83,7 +83,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     .from("rutinas")
     .select(`
       id, fecha_inicio, fecha_vencimiento, estado,
-      paciente:pacientes_gym(id, nombre, dias_asignados),
+      paciente:pacientes(id, nombre, dias_asignados),
       ejercicios:ejercicios_rutina(
         id, ejercicio_id, nombre_libre, etapa, orden,
         series_s1, reps_s1, series_s2, reps_s2,

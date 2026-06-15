@@ -38,21 +38,22 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("turnos")
-      .select("id, hora_inicio, hora_fin, tipo_tratamiento, estado, usa_botas, paciente:pacientes_kine(id, nombre, dni)")
+      .select("id, hora_inicio, hora_fin, tipo_tratamiento, estado, usa_botas, paciente:pacientes(id, nombre, dni)")
       .eq("fecha", today)
       .not("estado", "in", "(CANCELADO)")
       .order("hora_inicio", { ascending: true }),
 
     supabase
-      .from("pacientes_gym")
-      .select("id, nombre, telefono, dias_asignados, estado")
-      .eq("estado", "ACTIVO")
+      .from("pacientes")
+      .select("id, nombre, telefono, dias_asignados, estado_gym")
+      .eq("activo_gym", true)
+      .eq("estado_gym", "ACTIVO")
       .contains("dias_asignados", [diaNombre])
       .order("nombre", { ascending: true }),
 
     supabase
       .from("rutinas")
-      .select("id, fecha_vencimiento, paciente:pacientes_gym(id, nombre)")
+      .select("id, fecha_vencimiento, paciente:pacientes(id, nombre)")
       .eq("estado", "ACTIVA")
       .gte("fecha_vencimiento", today)
       .lte("fecha_vencimiento", hasta7)
@@ -60,7 +61,7 @@ export default async function DashboardPage() {
 
     supabase
       .from("turnos")
-      .select("id, fecha, hora_inicio, tipo_tratamiento, paciente:pacientes_kine(id, nombre), cobro:cobros_kine(id)")
+      .select("id, fecha, hora_inicio, tipo_tratamiento, paciente:pacientes(id, nombre), cobro:cobros_kine(id)")
       .eq("estado", "PRESENTE")
       .order("fecha", { ascending: false })
       .limit(50),

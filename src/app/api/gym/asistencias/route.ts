@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const supabase = createServiceClient();
   let query = supabase
     .from("asistencias_gym")
-    .select("*, paciente:pacientes_gym(id, nombre, dias_asignados)")
+    .select("*, paciente:pacientes(id, nombre, dias_asignados)")
     .order("fecha", { ascending: false });
 
   if (fecha) query = query.eq("fecha", fecha);
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       { id: randomUUID(), paciente_gym_id: pacienteGymId, fecha, estado, semana_ciclo: semanaCiclo, observaciones: observaciones || null },
       { onConflict: "paciente_gym_id,fecha", ignoreDuplicates: false }
     )
-    .select("*, paciente:pacientes_gym(id, nombre, dias_asignados)")
+    .select("*, paciente:pacientes(id, nombre, dias_asignados)")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
