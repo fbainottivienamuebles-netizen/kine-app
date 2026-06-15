@@ -52,3 +52,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const { id } = await params;
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("pacientes_gym").delete().eq("id", id);
+
+  if (error) {
+    if (error.code === "23503") return NextResponse.json({ error: "El miembro tiene rutinas, asistencias o cobros registrados y no puede eliminarse" }, { status: 409 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return new NextResponse(null, { status: 204 });
+}

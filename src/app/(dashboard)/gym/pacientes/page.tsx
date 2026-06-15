@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Search, Phone, User } from "lucide-react";
+import { Plus, Search, Phone, User, Trash2 } from "lucide-react";
 import { PacienteGymModal } from "@/components/gym/paciente-gym-modal";
 import { RutinaEditor } from "@/components/gym/rutina-editor";
 import { DIAS_SEMANA } from "@/lib/utils";
@@ -34,6 +34,8 @@ export default function PacientesGymPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [rutinaOpen, setRutinaOpen] = useState(false);
   const [seleccionado, setSeleccionado] = useState<PacienteGym | null>(null);
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
+  const [eliminando, setEliminando] = useState(false);
 
   const fetchPacientes = useCallback(async () => {
     setLoading(true);
@@ -43,6 +45,7 @@ export default function PacientesGymPage() {
       if (filtroEstado) params.set("estado", filtroEstado);
       const res = await fetch(`/api/gym/pacientes?${params}`);
       setPacientes(await res.json());
+      setSeleccionados(new Set());
     } catch { setPacientes([]); }
     finally { setLoading(false); }
   }, [busqueda, filtroEstado]);
@@ -51,6 +54,57 @@ export default function PacientesGymPage() {
 
   const diaToPosicion = Object.fromEntries(DIAS_SEMANA.map((d, i) => [d.value, i]));
 
+  function toggleSeleccion(id: string) {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleTodos() {
+    if (seleccionados.size === pacientes.length) {
+      setSeleccionados(new Set());
+    } else {
+      setSeleccionados(new Set(pacientes.map((p) => p.id)));
+    }
+  }
+
+  async function eliminarUno(id: string) {
+    const p = pacientes.find((x) => x.id === id);
+    if (!confirm(`¿Eliminar a ${p?.nombre ?? "este miembro"}? Esta acción no se puede deshacer.`)) return;
+    const res = await fetch(`/api/gym/pacientes/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "No se pudo eliminar el miembro");
+      return;
+    }
+    fetchPacientes();
+  }
+
+  async function eliminarSeleccionados() {
+    if (seleccionados.size === 0) return;
+    if (!confirm(`¿Eliminar ${seleccionados.size} miembro${seleccionados.size > 1 ? "s" : ""}? Esta acción no se puede deshacer.`)) return;
+    setEliminando(true);
+    const errores: string[] = [];
+    await Promise.all(
+      [...seleccionados].map(async (id) => {
+        const res = await fetch(`/api/gym/pacientes/${id}`, { method: "DELETE" });
+        if (!res.ok) {
+          const p = pacientes.find((x) => x.id === id);
+          const data = await res.json().catch(() => ({}));
+          errores.push(`${p?.nombre ?? id}: ${data.error ?? "error"}`);
+        }
+      })
+    );
+    setEliminando(false);
+    if (errores.length > 0) alert(`No se pudieron eliminar:\n${errores.join("\n")}`);
+    fetchPacientes();
+  }
+
+  const todosSeleccionados = pacientes.length > 0 && seleccionados.size === pacientes.length;
+  const algunoSeleccionado = seleccionados.size > 0;
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -58,10 +112,22 @@ export default function PacientesGymPage() {
           <h1 className="text-2xl font-bold text-gray-900">Miembros</h1>
           <p className="text-gray-500 text-sm mt-0.5">Gimnasio · {pacientes.length} {pacientes.length === 1 ? "miembro" : "miembros"}</p>
         </div>
-        <button onClick={() => { setSeleccionado(null); setModalOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors">
-          <Plus size={16} /> Nuevo miembro
-        </button>
+        <div className="flex items-center gap-2">
+          {algunoSeleccionado && (
+            <button
+              onClick={eliminarSeleccionados}
+              disabled={eliminando}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60"
+            >
+              <Trash2 size={15} />
+              Eliminar ({seleccionados.size})
+            </button>
+          )}
+          <button onClick={() => { setSeleccionado(null); setModalOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors">
+            <Plus size={16} /> Nuevo miembro
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-3 mb-5">
@@ -90,12 +156,39 @@ export default function PacientesGymPage() {
           <p className="text-gray-500">{busqueda ? "Sin resultados" : "No hay miembros registrados"}</p>
         </div>
       ) : (
-        <div className="grid gap-3">
-          {pacientes.map((p) => {
-            const diasOrdenados = [...(p.dias_asignados ?? [])].sort((a, b) => (diaToPosicion[a] ?? 9) - (diaToPosicion[b] ?? 9));
-            return (
-              <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:border-emerald-200 hover:shadow-md transition-all">
-                <div className="flex items-start justify-between gap-4">
+        <>
+          {/* Seleccionar todos */}
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <input
+              type="checkbox"
+              checked={todosSeleccionados}
+              onChange={toggleTodos}
+              className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
+            />
+            <span className="text-xs text-gray-400">Seleccionar todos</span>
+          </div>
+
+          <div className="grid gap-2">
+            {pacientes.map((p) => {
+              const diasOrdenados = [...(p.dias_asignados ?? [])].sort((a, b) => (diaToPosicion[a] ?? 9) - (diaToPosicion[b] ?? 9));
+              return (
+                <div
+                  key={p.id}
+                  className={`bg-white rounded-2xl border shadow-sm p-4 transition-all flex items-start gap-3 ${
+                    seleccionados.has(p.id) ? "border-emerald-300 bg-emerald-50/40" : "border-gray-100 hover:border-emerald-200 hover:shadow-md"
+                  }`}
+                >
+                  {/* Checkbox */}
+                  <div className="pt-0.5 shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={seleccionados.has(p.id)}
+                      onChange={() => toggleSeleccion(p.id)}
+                      className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1">
                       <h3 className="font-semibold text-gray-900">{p.nombre}</h3>
@@ -117,7 +210,9 @@ export default function PacientesGymPage() {
                       {p.obra_social && <span className="text-indigo-600">{p.obra_social}</span>}
                     </div>
                   </div>
-                  <div className="flex gap-2 shrink-0">
+
+                  {/* Acciones */}
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button onClick={() => { setSeleccionado(p); setRutinaOpen(true); }}
                       className="px-3 py-1.5 rounded-xl text-xs font-medium border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors">
                       + Rutina
@@ -126,12 +221,19 @@ export default function PacientesGymPage() {
                       className="px-3 py-1.5 rounded-xl text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                       Editar
                     </button>
+                    <button
+                      onClick={() => eliminarUno(p.id)}
+                      className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title="Eliminar miembro"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       <PacienteGymModal
