@@ -1,22 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
-  Calendar,
-  Users,
-  DollarSign,
-  Dumbbell,
-  ClipboardList,
-  CheckSquare,
-  BarChart2,
-  BookOpen,
-  Menu,
-  X,
+  LayoutDashboard, Calendar, Users, DollarSign,
+  ClipboardList, CheckSquare, BarChart2, BookOpen, LogOut, User,
 } from "lucide-react";
-import { useState } from "react";
+import type { JwtPayload } from "@/lib/auth";
 
 type NavItem = {
   href: string;
@@ -32,155 +22,114 @@ const navKine: NavItem[] = [
 ];
 
 const navGym: NavItem[] = [
-  { href: "/gym/pacientes", label: "Pacientes", icon: Users },
-  { href: "/gym/asistencias", label: "Asistencias hoy", icon: CheckSquare },
+  { href: "/gym/pacientes", label: "Miembros", icon: Users },
+  { href: "/gym/asistencias", label: "Asistencias", icon: CheckSquare },
   { href: "/gym/rutinas", label: "Rutinas", icon: ClipboardList },
   { href: "/gym/biblioteca", label: "Biblioteca", icon: BookOpen },
   { href: "/gym/cobranza", label: "Cobranza", icon: DollarSign },
 ];
 
-const navReportes: NavItem[] = [
+const navAdmin: NavItem[] = [
   { href: "/reportes", label: "Reportes", icon: BarChart2, soloAdmin: true },
 ];
 
-function NavSection({
-  title,
-  items,
-  rol,
-  pathname,
-  onNavigate,
-}: {
+function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const Icon = item.icon;
+  const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+  return (
+    <li>
+      <Link
+        href={item.href}
+        className={[
+          "flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-sm font-medium transition-colors border-l-[3px]",
+          active
+            ? "bg-[#1E293B] text-white border-l-[#0EA5E9]"
+            : "text-[#94A3B8] border-l-transparent hover:bg-[#1E293B]/60 hover:text-[#CBD5E1]",
+        ].join(" ")}
+      >
+        <Icon className="w-5 h-5 flex-shrink-0" />
+        {item.label}
+      </Link>
+    </li>
+  );
+}
+
+function NavSection({ title, items, rol, pathname }: {
   title: string;
   items: NavItem[];
   rol: string;
   pathname: string;
-  onNavigate?: () => void;
 }) {
-  const visibles = items.filter((item) => !item.soloAdmin || rol === "ADMIN");
+  const visibles = items.filter((i) => !i.soloAdmin || rol === "ADMIN");
   if (visibles.length === 0) return null;
-
   return (
-    <div className="mb-6">
-      <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+    <div className="mb-5">
+      <p className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-[#475569]">
         {title}
       </p>
-      <ul className="space-y-1">
-        {visibles.map((item) => {
-          const Icon = item.icon;
-          const active = pathname.startsWith(item.href);
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                onClick={onNavigate}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
-                  active
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                )}
-              >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                {item.label}
-              </Link>
-            </li>
-          );
-        })}
+      <ul className="space-y-0.5">
+        {visibles.map((item) => (
+          <SidebarLink key={item.href} item={item} pathname={pathname} />
+        ))}
       </ul>
     </div>
   );
 }
 
-export function Sidebar({ rol }: { rol: string }) {
+export function Sidebar({ rol, usuario }: { rol: string; usuario: JwtPayload }) {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const router = useRouter();
 
-  const content = (
-    <div className="flex flex-col h-full">
-      <div className="px-4 py-5 border-b border-gray-100">
-        <div className="text-lg font-bold text-gray-900">KineApp</div>
-        <div className="text-xs text-gray-400 mt-0.5">Gestión integral</div>
-      </div>
-
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="mb-6">
-          <ul className="space-y-1">
-            <li>
-              <Link
-                href="/dashboard"
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
-                  pathname === "/dashboard"
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                )}
-              >
-                <LayoutDashboard className="w-5 h-5" />
-                Dashboard
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        <NavSection
-          title="Kinesiología"
-          items={navKine}
-          rol={rol}
-          pathname={pathname}
-          onNavigate={() => setMobileOpen(false)}
-        />
-        <NavSection
-          title="Gimnasio"
-          items={[{ href: "/gym/asistencias", label: "Asistencias hoy", icon: CheckSquare }, ...navGym.filter(i => i.href !== "/gym/asistencias")]}
-          rol={rol}
-          pathname={pathname}
-          onNavigate={() => setMobileOpen(false)}
-        />
-        <NavSection
-          title="Administración"
-          items={navReportes}
-          rol={rol}
-          pathname={pathname}
-          onNavigate={() => setMobileOpen(false)}
-        />
-      </nav>
-    </div>
-  );
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
-    <>
-      {/* Mobile toggle button */}
-      <button
-        className="fixed top-4 left-4 z-50 md:hidden bg-white rounded-xl p-2 shadow-md border border-gray-200"
-        onClick={() => setMobileOpen(!mobileOpen)}
-        aria-label="Menú"
-      >
-        {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-      </button>
+    <aside className="hidden md:flex md:flex-col w-60 bg-[#0F172A] flex-shrink-0">
+      {/* Logo */}
+      <div className="px-5 py-5 border-b border-[#1E293B]">
+        <div className="text-lg font-bold text-white tracking-tight">KineApp</div>
+        <div className="text-xs text-[#475569] mt-0.5">Gestión integral</div>
+      </div>
 
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <div className="mb-5">
+          <ul className="space-y-0.5">
+            <SidebarLink
+              item={{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }}
+              pathname={pathname}
+            />
+          </ul>
+        </div>
+        <NavSection title="Kinesiología" items={navKine} rol={rol} pathname={pathname} />
+        <NavSection title="Gimnasio" items={navGym} rol={rol} pathname={pathname} />
+        <NavSection title="Administración" items={navAdmin} rol={rol} pathname={pathname} />
+      </nav>
 
-      {/* Mobile sidebar */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 md:hidden",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        {content}
-      </aside>
-
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:flex-col w-56 bg-white border-r border-gray-200 flex-shrink-0">
-        {content}
-      </aside>
-    </>
+      {/* User info + logout */}
+      <div className="px-4 py-4 border-t border-[#1E293B]">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#1E293B] flex items-center justify-center flex-shrink-0">
+            <User className="w-4 h-4 text-[#94A3B8]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">{usuario.nombre}</p>
+            <p className="text-xs text-[#475569] capitalize">
+              {usuario.rol === "ADMIN" ? "Administradora" : "Asistente"}
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="p-1.5 rounded-lg text-[#475569] hover:text-white hover:bg-[#1E293B] transition-colors"
+            title="Cerrar sesión"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </aside>
   );
 }
