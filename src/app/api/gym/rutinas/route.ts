@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
         id, ejercicio_id, nombre_libre, etapa, orden,
         series_s1, reps_s1, series_s2, reps_s2,
         series_s3, reps_s3, series_s4, reps_s4, notas,
-        ejercicio:biblioteca_ejercicios(id, nombre, grupo_muscular, nivel)
+        ejercicio:biblioteca_ejercicios(id, nombre, grupo_muscular, nivel, imagen_url)
       )
     `)
     .order("fecha_inicio", { ascending: false });
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
         id, ejercicio_id, nombre_libre, etapa, orden,
         series_s1, reps_s1, series_s2, reps_s2,
         series_s3, reps_s3, series_s4, reps_s4, notas,
-        ejercicio:biblioteca_ejercicios(id, nombre, grupo_muscular, nivel)
+        ejercicio:biblioteca_ejercicios(id, nombre, grupo_muscular, nivel, imagen_url)
       )
     `)
     .eq("id", rutina.id)

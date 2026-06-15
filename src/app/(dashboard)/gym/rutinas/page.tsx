@@ -1,8 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { Plus, AlertCircle, CheckCircle2, Calendar } from "lucide-react";
 import { RutinaEditor } from "@/components/gym/rutina-editor";
+
+const RutinaPrintBtn = dynamic(
+  () => import("@/components/gym/rutina-print-btn"),
+  { ssr: false }
+);
 
 type EjercicioRutina = {
   id: string;
@@ -15,7 +21,7 @@ type EjercicioRutina = {
   series_s3: number | null; reps_s3: number | null;
   series_s4: number | null; reps_s4: number | null;
   notas: string | null;
-  ejercicio: { id: string; nombre: string; grupo_muscular: string | null; nivel: string } | null;
+  ejercicio: { id: string; nombre: string; grupo_muscular: string | null; nivel: string; imagen_url: string | null } | null;
 };
 
 type Rutina = {
@@ -63,6 +69,14 @@ export default function RutinasPage() {
   const [expandida, setExpandida] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [rutinaEdit, setRutinaEdit] = useState<Rutina | null>(null);
+  const [profesional, setProfesional] = useState("");
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => { if (d?.usuario?.nombre) setProfesional(d.usuario.nombre); })
+      .catch(() => {});
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -156,6 +170,7 @@ export default function RutinasPage() {
                       </div>
                     </button>
                     <div className="flex gap-2 shrink-0">
+                      <RutinaPrintBtn rutina={r} profesional={profesional} />
                       <button onClick={() => { setRutinaEdit(r); setEditorOpen(true); }}
                         className="px-3 py-1.5 rounded-xl text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                         Editar
