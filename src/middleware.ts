@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login"];
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/setup"];
 
 async function isAuthenticated(request: NextRequest): Promise<boolean> {
   const token = request.cookies.get("kineapp_token")?.value;

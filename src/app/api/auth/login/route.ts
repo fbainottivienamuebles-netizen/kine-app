@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyPassword, signToken, cookieOptions } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -18,13 +18,20 @@ export async function POST(req: NextRequest) {
 
   const { email, password } = parsed.data;
 
-  const usuario = await prisma.usuario.findUnique({ where: { email } });
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("usuarios")
+    .select("*")
+    .eq("email", email)
+    .eq("activo", true)
+    .single();
 
-  if (!usuario || !usuario.activo) {
+  if (error || !data) {
     return NextResponse.json({ error: "Credenciales incorrectas" }, { status: 401 });
   }
 
-  const valid = await verifyPassword(password, usuario.passwordHash);
+  const usuario = data;
+  const valid = await verifyPassword(password, usuario.password_hash);
   if (!valid) {
     return NextResponse.json({ error: "Credenciales incorrectas" }, { status: 401 });
   }
