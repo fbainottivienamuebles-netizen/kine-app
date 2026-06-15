@@ -6,7 +6,7 @@ import { z } from "zod";
 
 const pacienteSchema = z.object({
   nombre: z.string().min(1),
-  dni: z.string().min(6),
+  dni: z.string().optional().or(z.literal("")),
   telefono: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
   fechaNacimiento: z.string().optional(),
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     .insert({
       id: randomUUID(),
       nombre,
-      dni,
+      dni: dni || null,
       telefono: telefono || null,
       email: email || null,
       fecha_nacimiento: fechaNacimiento || null,

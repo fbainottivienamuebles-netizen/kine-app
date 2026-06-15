@@ -148,12 +148,11 @@ export function PacienteModal({ isOpen, onClose, onSuccess, paciente }: Props) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">DNI <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">DNI</label>
                 <input
                   type="text"
                   value={dni}
                   onChange={(e) => setDni(e.target.value)}
-                  required
                   placeholder="Ej: 30123456"
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
