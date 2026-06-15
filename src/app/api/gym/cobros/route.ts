@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
     .from("cobros_gym")
     .upsert(
       {
+        id: randomUUID(),
         paciente_gym_id: pacienteGymId,
         periodo_mes: periodoMes,
         periodo_anio: periodoAnio,

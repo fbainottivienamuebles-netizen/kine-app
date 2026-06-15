@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
@@ -51,8 +52,8 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from("asistencias_gym")
     .upsert(
-      { paciente_gym_id: pacienteGymId, fecha, estado, semana_ciclo: semanaCiclo, observaciones: observaciones || null },
-      { onConflict: "paciente_gym_id,fecha" }
+      { id: randomUUID(), paciente_gym_id: pacienteGymId, fecha, estado, semana_ciclo: semanaCiclo, observaciones: observaciones || null },
+      { onConflict: "paciente_gym_id,fecha", ignoreDuplicates: false }
     )
     .select("*, paciente:pacientes_gym(id, nombre, dias_asignados)")
     .single();

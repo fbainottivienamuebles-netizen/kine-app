@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from("pacientes_gym")
     .insert({
+      id: randomUUID(),
       nombre,
       fecha_nacimiento: fechaNacimiento || null,
       telefono: telefono || null,

@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("biblioteca_ejercicios")
-    .insert({ nombre, descripcion: descripcion || null, grupo_muscular: grupoMuscular || null, nivel, contraindicaciones: contraindicaciones || null, imagen_url: imagenUrl || null, activo: true })
+    .insert({ id: randomUUID(), nombre, descripcion: descripcion || null, grupo_muscular: grupoMuscular || null, nivel, contraindicaciones: contraindicaciones || null, imagen_url: imagenUrl || null, activo: true })
     .select()
     .single();
 

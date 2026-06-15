@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
@@ -83,6 +84,7 @@ export async function POST(req: NextRequest) {
   const { data: rutina, error: rutinaError } = await supabase
     .from("rutinas")
     .insert({
+      id: randomUUID(),
       paciente_gym_id: pacienteGymId,
       fecha_inicio: fechaInicio,
       fecha_vencimiento: fechaVencimientoStr,
@@ -96,6 +98,7 @@ export async function POST(req: NextRequest) {
 
   if (ejercicios.length > 0) {
     const rows = ejercicios.map((e, i) => ({
+      id: randomUUID(),
       rutina_id: rutina.id,
       ejercicio_id: e.ejercicioId || null,
       nombre_libre: e.nombreLibre || null,

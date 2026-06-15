@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from("turnos")
     .insert({
+      id: randomUUID(),
       paciente_id: pacienteId,
       fecha,
       hora_inicio: horaInicio + ":00",
