@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, Loader2, UserPlus } from "lucide-react";
 import { ETIQUETAS_TRATAMIENTO, ETIQUETAS_ESTADO_TURNO } from "@/lib/utils";
-import { PacienteModal } from "./paciente-modal";
+import { PacienteModal } from "@/components/paciente-modal";
 
 type Paciente = { id: string; nombre: string; dni: string | null };
 
@@ -382,6 +382,7 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
     </div>
     <PacienteModal
       isOpen={showNuevoPaciente}
+      moduloDefault="kine"
       onClose={() => setShowNuevoPaciente(false)}
       onSuccess={async () => {
         setShowNuevoPaciente(false);

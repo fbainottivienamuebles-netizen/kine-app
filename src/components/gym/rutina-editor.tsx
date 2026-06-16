@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { X, Plus, Trash2, Loader2, Search, GripVertical, UserPlus } from "lucide-react";
-import { PacienteGymModal } from "./paciente-gym-modal";
+import { PacienteModal } from "@/components/paciente-modal";
 
 type EjercicioBiblioteca = { id: string; nombre: string; grupo_muscular: string | null; nivel: string };
 type PacienteGym = { id: string; nombre: string; dias_asignados: string[] };
@@ -448,8 +448,9 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
         </form>
       </div>
     </div>
-    <PacienteGymModal
+    <PacienteModal
       isOpen={showNuevoMiembro}
+      moduloDefault="gym"
       onClose={() => setShowNuevoMiembro(false)}
       onSuccess={async () => {
         setShowNuevoMiembro(false);
