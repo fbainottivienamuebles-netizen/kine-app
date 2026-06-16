@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { X, Plus, Trash2, Loader2, Search, GripVertical } from "lucide-react";
+import { X, Plus, Trash2, Loader2, Search, GripVertical, UserPlus } from "lucide-react";
+import { PacienteGymModal } from "./paciente-gym-modal";
 
 type EjercicioBiblioteca = { id: string; nombre: string; grupo_muscular: string | null; nivel: string };
 type PacienteGym = { id: string; nombre: string; dias_asignados: string[] };
@@ -93,11 +94,16 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
   const [showBiblioteca, setShowBiblioteca] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showNuevoMiembro, setShowNuevoMiembro] = useState(false);
+
+  async function cargarMiembros() {
+    fetch("/api/gym/pacientes?estado=ACTIVO")
+      .then((r) => r.json()).then(setPacientes).catch(() => setPacientes([]));
+  }
 
   useEffect(() => {
     if (!isOpen) return;
-    fetch("/api/gym/pacientes?estado=ACTIVO")
-      .then((r) => r.json()).then(setPacientes).catch(() => setPacientes([]));
+    cargarMiembros();
     fetch("/api/gym/biblioteca")
       .then((r) => r.json()).then(setBiblioteca).catch(() => setBiblioteca([]));
   }, [isOpen]);
@@ -229,6 +235,7 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
   }));
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] flex flex-col">
         <div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
@@ -243,7 +250,18 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
           <div className="p-5 border-b border-gray-100 shrink-0">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Miembro</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Miembro</label>
+                  {!pacienteId && !editando && (
+                    <button
+                      type="button"
+                      onClick={() => setShowNuevoMiembro(true)}
+                      className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-800 font-medium"
+                    >
+                      <UserPlus size={13} /> Nuevo miembro
+                    </button>
+                  )}
+                </div>
                 {pacienteId && !editando ? (
                   <div className="flex items-center justify-between px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-200">
                     <span className="text-sm font-medium text-emerald-900">{pacienteNombre}</span>
@@ -261,14 +279,29 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
                       <input type="text" value={busquedaPaciente} onChange={(e) => setBusquedaPaciente(e.target.value)}
                         placeholder="Buscar miembro..." className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                     </div>
-                    <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
-                      {pacientesFiltrados.slice(0, 6).map((p) => (
-                        <button key={p.id} type="button" onClick={() => { setPacienteId(p.id); setPacienteNombre(p.nombre); }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-gray-900">
-                          {p.nombre}
+                    {pacientesFiltrados.length === 0 ? (
+                      <div className="px-1 py-2 flex items-center justify-between">
+                        <p className="text-xs text-gray-400">
+                          {pacientes.length === 0 ? "No hay miembros activos." : "Sin resultados."}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setShowNuevoMiembro(true)}
+                          className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-800 font-medium"
+                        >
+                          <UserPlus size={13} /> Crear miembro
                         </button>
-                      ))}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
+                        {pacientesFiltrados.slice(0, 6).map((p) => (
+                          <button key={p.id} type="button" onClick={() => { setPacienteId(p.id); setPacienteNombre(p.nombre); }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-gray-900">
+                            {p.nombre}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -415,5 +448,15 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
         </form>
       </div>
     </div>
+    <PacienteGymModal
+      isOpen={showNuevoMiembro}
+      onClose={() => setShowNuevoMiembro(false)}
+      onSuccess={async () => {
+        setShowNuevoMiembro(false);
+        await cargarMiembros();
+        setBusquedaPaciente("");
+      }}
+    />
+    </>
   );
 }
