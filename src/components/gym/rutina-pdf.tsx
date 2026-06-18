@@ -1,6 +1,6 @@
 'use client';
 
-import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer';
 
 export type EjercicioForPDF = {
   id: string;
@@ -58,43 +58,33 @@ function formatFecha(f: string) {
 
 const S = StyleSheet.create({
   page: {
-    padding: 28,
-    paddingBottom: 42,
+    padding: 18,
+    paddingBottom: 28,
     fontFamily: 'Helvetica',
-    fontSize: 9,
+    fontSize: 8,
     color: '#1E293B',
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
-  patientName: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: '#1E293B' },
-  dateText: { fontSize: 8, color: '#64748B', marginTop: 2 },
-  weekText: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#8B5CF6' },
-  divider: { borderBottomWidth: 2, borderBottomColor: '#8B5CF6', marginBottom: 8 },
-  etapaBlock: { marginBottom: 6 },
-  etapaHdr: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 3, marginBottom: 3 },
-  etapaHdrText: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#FFFFFF' },
-  exRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 2, borderRadius: 3, minHeight: 38 },
-  imgCell: {
-    width: 38, height: 38,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 5,
-    flexShrink: 0,
-  },
-  imgPlaceholderText: { fontSize: 6, color: '#94A3B8', textAlign: 'center' },
-  nameCell: { flex: 1, justifyContent: 'center', paddingRight: 4, paddingVertical: 4 },
-  exName: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#1E293B', marginBottom: 1 },
-  exNote: { fontSize: 7.5, color: '#64748B' },
-  weeksTable: { width: 185, flexShrink: 0, paddingVertical: 3 },
-  weeksHeader: { flexDirection: 'row', marginBottom: 2 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
+  patientName: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#1E293B' },
+  dateText: { fontSize: 7, color: '#64748B', marginTop: 1 },
+  weekText: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#8B5CF6' },
+  divider: { borderBottomWidth: 2, borderBottomColor: '#8B5CF6', marginBottom: 5 },
+  etapaBlock: { marginBottom: 4 },
+  etapaHdr: { paddingVertical: 3, paddingHorizontal: 6, borderRadius: 2, marginBottom: 2 },
+  etapaHdrText: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#FFFFFF' },
+  exRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 1, borderRadius: 2, paddingHorizontal: 6, paddingVertical: 2 },
+  nameCell: { flex: 1, paddingRight: 4 },
+  exName: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#1E293B' },
+  exNote: { fontSize: 6.5, color: '#64748B' },
+  weeksTable: { width: 145, flexShrink: 0 },
+  weeksHeader: { flexDirection: 'row', marginBottom: 1 },
   weeksValues: { flexDirection: 'row' },
-  wkHdrCell: { flex: 1, borderRadius: 2, marginHorizontal: 1, paddingVertical: 3, alignItems: 'center' },
-  wkHdrText: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#FFFFFF' },
-  wkValCell: { flex: 1, borderRadius: 2, marginHorizontal: 1, paddingVertical: 3, alignItems: 'center' },
-  wkValText: { fontSize: 7.5, color: '#475569' },
-  wkValActiveText: { fontSize: 7.5, fontFamily: 'Helvetica-Bold' },
-  footer: { position: 'absolute', bottom: 14, left: 28, right: 28, textAlign: 'center', fontSize: 8, color: '#94A3B8' },
+  wkHdrCell: { flex: 1, borderRadius: 2, marginHorizontal: 1, paddingVertical: 1, alignItems: 'center' },
+  wkHdrText: { fontSize: 6, fontFamily: 'Helvetica-Bold', color: '#FFFFFF' },
+  wkValCell: { flex: 1, borderRadius: 2, marginHorizontal: 1, paddingVertical: 1, alignItems: 'center' },
+  wkValText: { fontSize: 6.5, color: '#475569' },
+  wkValActiveText: { fontSize: 6.5, fontFamily: 'Helvetica-Bold' },
+  footer: { position: 'absolute', bottom: 8, left: 18, right: 18, textAlign: 'center', fontSize: 7, color: '#94A3B8' },
 });
 
 export function RutinaPDFDocument({
@@ -137,23 +127,9 @@ export function RutinaPDFDocument({
 
               {items.map((ej) => {
                 const nombre = ej.ejercicio?.nombre ?? ej.nombre_libre ?? 'Ejercicio';
-                const imgUrl = ej.ejercicio?.imagen_url ?? null;
-                const grupo = ej.ejercicio?.grupo_muscular ?? null;
 
                 return (
                   <View key={ej.id} style={[S.exRow, { backgroundColor: etapa.bg }]}>
-                    {/* Image */}
-                    <View style={S.imgCell}>
-                      {imgUrl ? (
-                        <Image
-                          src={imgUrl}
-                          style={{ width: 34, height: 34, borderRadius: 4 }}
-                        />
-                      ) : (
-                        <Text style={S.imgPlaceholderText}>{grupo ?? 'EJ'}</Text>
-                      )}
-                    </View>
-
                     {/* Name + note */}
                     <View style={S.nameCell}>
                       <Text style={S.exName}>{nombre}</Text>
