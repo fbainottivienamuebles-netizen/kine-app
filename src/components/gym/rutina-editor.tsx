@@ -73,8 +73,8 @@ function nuevoEjercicio(etapa: string): EjercicioRutinaForm {
   return {
     _key: nextKey(),
     ejercicioId: null, nombreLibre: "", etapa,
-    seriesS1: "3", repsS1: "10", seriesS2: "3", repsS2: "10",
-    seriesS3: "3", repsS3: "10", seriesS4: "3", repsS4: "10",
+    seriesS1: "4", repsS1: "8", seriesS2: "4", repsS2: "6",
+    seriesS3: "3", repsS3: "8", seriesS4: "4", repsS4: "8",
     notas: "", orden: 0,
   };
 }
