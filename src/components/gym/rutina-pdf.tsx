@@ -58,48 +58,65 @@ function formatFecha(f: string) {
 
 const S = StyleSheet.create({
   page: {
-    padding: 18,
-    paddingBottom: 28,
+    padding: 16,
     fontFamily: 'Helvetica',
     fontSize: 8,
     color: '#1E293B',
+    flexDirection: 'row',
+  },
+  col: { flex: 1, flexDirection: 'column', justifyContent: 'space-between' },
+  sep: {
+    width: 0,
+    borderLeftWidth: 1,
+    borderLeftColor: '#CBD5E1',
+    borderStyle: 'dashed',
+    marginHorizontal: 12,
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
-  patientName: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#1E293B' },
-  dateText: { fontSize: 7, color: '#64748B', marginTop: 1 },
-  weekText: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#8B5CF6' },
+  patientName: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#1E293B' },
+  dateText: { fontSize: 6.5, color: '#64748B', marginTop: 1 },
+  weekText: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#8B5CF6' },
   divider: { borderBottomWidth: 2, borderBottomColor: '#8B5CF6', marginBottom: 5 },
-  etapaBlock: { marginBottom: 4 },
-  etapaHdr: { paddingVertical: 3, paddingHorizontal: 6, borderRadius: 2, marginBottom: 2 },
-  etapaHdrText: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#FFFFFF' },
-  exRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 1, borderRadius: 2, paddingHorizontal: 6, paddingVertical: 2 },
+  etapaBlock: { marginBottom: 3 },
+  etapaHdr: { paddingVertical: 2.5, paddingHorizontal: 6, borderRadius: 2, marginBottom: 2 },
+  etapaHdrText: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#FFFFFF' },
+  exRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 1, borderRadius: 2, paddingHorizontal: 5, paddingVertical: 2 },
   nameCell: { flex: 1, paddingRight: 4 },
-  exName: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#1E293B' },
-  exNote: { fontSize: 6.5, color: '#64748B' },
-  weeksTable: { width: 145, flexShrink: 0 },
+  exName: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#1E293B' },
+  exNote: { fontSize: 6, color: '#64748B' },
+  weeksTable: { width: 130, flexShrink: 0 },
   weeksHeader: { flexDirection: 'row', marginBottom: 1 },
   weeksValues: { flexDirection: 'row' },
   wkHdrCell: { flex: 1, borderRadius: 2, marginHorizontal: 1, paddingVertical: 1, alignItems: 'center' },
-  wkHdrText: { fontSize: 6, fontFamily: 'Helvetica-Bold', color: '#FFFFFF' },
+  wkHdrText: { fontSize: 5.5, fontFamily: 'Helvetica-Bold', color: '#FFFFFF' },
   wkValCell: { flex: 1, borderRadius: 2, marginHorizontal: 1, paddingVertical: 1, alignItems: 'center' },
-  wkValText: { fontSize: 6.5, color: '#475569' },
-  wkValActiveText: { fontSize: 6.5, fontFamily: 'Helvetica-Bold' },
-  footer: { position: 'absolute', bottom: 8, left: 18, right: 18, textAlign: 'center', fontSize: 7, color: '#94A3B8' },
+  wkValText: { fontSize: 6, color: '#475569' },
+  wkValActiveText: { fontSize: 6, fontFamily: 'Helvetica-Bold' },
+  footer: {
+    textAlign: 'center',
+    fontSize: 6.5,
+    color: '#94A3B8',
+    paddingTop: 4,
+    borderTopWidth: 0.5,
+    borderTopColor: '#E2E8F0',
+    marginTop: 6,
+  },
 });
 
-export function RutinaPDFDocument({
+function RutinaHalf({
   rutina,
   profesional,
+  semana,
+  hoy,
 }: {
   rutina: RutinaForPDF;
   profesional: string;
+  semana: number;
+  hoy: string;
 }) {
-  const semana = semanaCiclo(rutina.fecha_inicio);
-  const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
   return (
-    <Document>
-      <Page size="A5" style={S.page}>
+    <View style={S.col}>
+      <View>
         {/* Header */}
         <View style={S.header}>
           <View>
@@ -130,13 +147,11 @@ export function RutinaPDFDocument({
 
                 return (
                   <View key={ej.id} style={[S.exRow, { backgroundColor: etapa.bg }]}>
-                    {/* Name + note */}
                     <View style={S.nameCell}>
                       <Text style={S.exName}>{nombre}</Text>
                       {ej.notas ? <Text style={S.exNote}>{ej.notas}</Text> : null}
                     </View>
 
-                    {/* Weeks table */}
                     <View style={S.weeksTable}>
                       <View style={S.weeksHeader}>
                         {SEMANA_COLS.map((sc, i) => (
@@ -178,11 +193,32 @@ export function RutinaPDFDocument({
             </View>
           );
         })}
+      </View>
 
-        {/* Footer */}
-        <Text style={S.footer}>
-          {profesional} — Rutina valida hasta {formatFecha(rutina.fecha_vencimiento)}
-        </Text>
+      {/* Footer */}
+      <Text style={S.footer}>
+        {profesional} — Rutina válida hasta {formatFecha(rutina.fecha_vencimiento)}
+      </Text>
+    </View>
+  );
+}
+
+export function RutinaPDFDocument({
+  rutina,
+  profesional,
+}: {
+  rutina: RutinaForPDF;
+  profesional: string;
+}) {
+  const semana = semanaCiclo(rutina.fecha_inicio);
+  const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  return (
+    <Document>
+      <Page size="A4" orientation="landscape" style={S.page}>
+        <RutinaHalf rutina={rutina} profesional={profesional} semana={semana} hoy={hoy} />
+        <View style={S.sep} />
+        <RutinaHalf rutina={rutina} profesional={profesional} semana={semana} hoy={hoy} />
       </Page>
     </Document>
   );
