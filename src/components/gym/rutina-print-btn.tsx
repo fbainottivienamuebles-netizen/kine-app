@@ -1,14 +1,9 @@
 'use client';
 
-import { PDFDownloadLink } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 import { RutinaPDFDocument, type RutinaForPDF } from './rutina-pdf';
 import { Printer } from 'lucide-react';
-
-function semanaCiclo(fechaInicio: string): number {
-  const inicio = new Date(fechaInicio + 'T00:00:00');
-  const dias = Math.floor((Date.now() - inicio.getTime()) / 86400000);
-  return Math.min(Math.max(Math.floor(dias / 7) + 1, 1), 4);
-}
+import { useState } from 'react';
 
 export default function RutinaPrintBtn({
   rutina,
@@ -17,32 +12,38 @@ export default function RutinaPrintBtn({
   rutina: RutinaForPDF;
   profesional: string;
 }) {
-  const semana = semanaCiclo(rutina.fecha_inicio);
-  const fecha = new Date().toISOString().slice(0, 10);
-  const slug = rutina.paciente.nombre
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
-  const fileName = `rutina-${slug}-semana${semana}-${fecha}.pdf`;
+  const [loading, setLoading] = useState(false);
+
+  async function handlePrint() {
+    setLoading(true);
+    // Abrir ventana sincrónicamente para evitar bloqueadores de popups
+    const win = window.open('', '_blank');
+    try {
+      const blob = await pdf(
+        <RutinaPDFDocument rutina={rutina} profesional={profesional} />
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      if (win) {
+        win.location.href = url;
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 15000);
+    } catch {
+      win?.close();
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <PDFDownloadLink
-      document={<RutinaPDFDocument rutina={rutina} profesional={profesional} />}
-      fileName={fileName}
-      style={{ textDecoration: 'none' }}
+    <button
+      onClick={handlePrint}
+      disabled={loading}
+      className={`px-3 py-1.5 rounded-xl text-xs font-medium border border-violet-200 text-violet-600 hover:bg-violet-50 transition-colors inline-flex items-center gap-1 ${
+        loading ? 'opacity-60 cursor-wait' : 'cursor-pointer'
+      }`}
     >
-      {({ loading }: { loading: boolean }) => (
-        <span
-          className={`px-3 py-1.5 rounded-xl text-xs font-medium border border-violet-200 text-violet-600 hover:bg-violet-50 transition-colors inline-flex items-center gap-1 ${
-            loading ? 'opacity-60 cursor-wait' : 'cursor-pointer'
-          }`}
-        >
-          <Printer size={12} />
-          {loading ? 'Generando...' : 'Imprimir'}
-        </span>
-      )}
-    </PDFDownloadLink>
+      <Printer size={12} />
+      {loading ? 'Generando...' : 'Imprimir'}
+    </button>
   );
 }
