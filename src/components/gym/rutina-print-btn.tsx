@@ -123,7 +123,7 @@ function buildPrintHTML(rutina1: RutinaForPDF, rutina2: RutinaForPDF, profesiona
   <title>Rutinas</title>
   <style>
     @page { size: A4 landscape; margin: 6mm; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
     body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #1E293B; }
     .page { display: flex; flex-direction: row; }
     .sep { flex-shrink: 0; width: 0; border-left: 1px dashed #CBD5E1; margin: 0 10mm; }
