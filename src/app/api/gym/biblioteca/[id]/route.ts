@@ -3,11 +3,15 @@ import { getSession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
 import { z } from "zod";
 
+const NIVELES_VALIDOS = ["basico", "intermedio", "avanzado"] as const;
+const ETAPAS_VALIDAS = ["ENTRADA_CALOR", "PRIMERA_ETAPA", "SEGUNDA_ETAPA", "TERCERA_ETAPA", "TRABAJO_FINAL"] as const;
+
 const updateSchema = z.object({
   nombre: z.string().min(1).optional(),
   descripcion: z.string().optional().nullable(),
   grupoMuscular: z.string().optional().nullable(),
-  nivel: z.enum(["BAJO","MEDIO","ALTO"]).optional(),
+  niveles: z.array(z.enum(NIVELES_VALIDOS)).optional(),
+  etapas: z.array(z.enum(ETAPAS_VALIDAS)).optional(),
   contraindicaciones: z.string().optional().nullable(),
   imagenUrl: z.string().optional().nullable(),
   activo: z.boolean().optional(),
@@ -27,7 +31,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (d.nombre !== undefined) updates.nombre = d.nombre;
   if (d.descripcion !== undefined) updates.descripcion = d.descripcion || null;
   if (d.grupoMuscular !== undefined) updates.grupo_muscular = d.grupoMuscular || null;
-  if (d.nivel !== undefined) updates.nivel = d.nivel;
+  if (d.niveles !== undefined) {
+    updates.niveles = d.niveles;
+    // Keep legacy nivel in sync
+    updates.nivel = d.niveles.includes("avanzado") ? "ALTO" : d.niveles.includes("intermedio") ? "MEDIO" : "BAJO";
+  }
+  if (d.etapas !== undefined) updates.etapas = d.etapas;
   if (d.contraindicaciones !== undefined) updates.contraindicaciones = d.contraindicaciones || null;
   if (d.imagenUrl !== undefined) updates.imagen_url = d.imagenUrl || null;
   if (d.activo !== undefined) updates.activo = d.activo;

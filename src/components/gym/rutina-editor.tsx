@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { X, Plus, Trash2, Loader2, Search, GripVertical, UserPlus } from "lucide-react";
 import { PacienteModal } from "@/components/paciente-modal";
+import { SugerirRutinaModal } from "@/components/gym/sugerir-rutina-modal";
 
 type EjercicioBiblioteca = { id: string; nombre: string; grupo_muscular: string | null; nivel: string };
 type PacienteGym = { id: string; nombre: string; dias_asignados: string[] };
@@ -95,6 +96,7 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showNuevoMiembro, setShowNuevoMiembro] = useState(false);
+  const [showSugerirModal, setShowSugerirModal] = useState(false);
 
   async function cargarMiembros() {
     fetch("/api/gym/pacientes?estado=ACTIVO")
@@ -110,6 +112,7 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
 
   useEffect(() => {
     if (!isOpen) return;
+    setShowSugerirModal(false);
     if (rutina) {
       setPacienteId(rutina.paciente.id);
       setPacienteNombre(rutina.paciente.nombre);
@@ -234,6 +237,8 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
     items: ejercicios.filter((e) => e.etapa === etapa.value),
   }));
 
+  const mostrarSelectorModo = !editando && ejercicios.length === 0;
+
   return (
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
@@ -318,116 +323,147 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
 
           {/* Editor ejercicios */}
           <div className="flex flex-1 min-h-0 overflow-hidden">
-            {/* Sidebar etapas */}
-            <div className="w-44 border-r border-gray-100 p-3 shrink-0 overflow-y-auto">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Etapa</p>
-              {ETAPAS.map((et) => {
-                const count = ejercicios.filter((e) => e.etapa === et.value).length;
-                return (
-                  <button key={et.value} type="button" onClick={() => setEtapaActiva(et.value)}
-                    className={`w-full text-left px-2 py-2 rounded-xl text-xs font-medium mb-1 transition-all ${
-                      etapaActiva === et.value ? ETAPA_COLORS[et.value] + " border" : "text-gray-600 hover:bg-gray-50"
-                    }`}>
-                    {et.label}
-                    {count > 0 && <span className="ml-1 text-[10px] opacity-60">({count})</span>}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Lista ejercicios de etapa activa */}
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-700">
-                  {ETAPAS.find((e) => e.value === etapaActiva)?.label}
-                </h3>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setShowBiblioteca(true)}
-                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">
-                    <Search size={12} /> Biblioteca
-                  </button>
-                  <button type="button" onClick={addEjercicioLibre}
-                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200">
-                    <Plus size={12} /> Libre
-                  </button>
-                </div>
-              </div>
-
-              {/* Buscador biblioteca */}
-              {showBiblioteca && (
-                <div className="mb-3 p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <input type="text" value={busquedaEjercicio} onChange={(e) => setBusquedaEjercicio(e.target.value)}
-                      placeholder="Buscar en biblioteca..." autoFocus
-                      className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
-                    <button type="button" onClick={() => setShowBiblioteca(false)} className="text-gray-400 hover:text-gray-600"><X size={14} /></button>
-                  </div>
-                  <div className="max-h-40 overflow-y-auto divide-y divide-emerald-100">
-                    {ejerciciosFiltrados.slice(0, 10).map((ej) => (
-                      <button key={ej.id} type="button" onClick={() => addDesdebiblioteca(ej)}
-                        className="w-full text-left px-2 py-1.5 text-sm hover:bg-emerald-100 rounded-lg">
-                        <span className="font-medium text-gray-900">{ej.nombre}</span>
-                        {ej.grupo_muscular && <span className="text-gray-500 ml-2 text-xs">{ej.grupo_muscular}</span>}
+            {mostrarSelectorModo ? (
+              /* Mode selector when no exercises yet */
+              <div className="flex-1 flex items-center justify-center p-8">
+                {!pacienteId ? (
+                  <p className="text-sm text-gray-400">Seleccioná un miembro para comenzar</p>
+                ) : (
+                  <div className="text-center w-full max-w-xs">
+                    <p className="text-sm text-gray-500 mb-4">¿Cómo querés armar esta rutina?</p>
+                    <div className="flex flex-col gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowSugerirModal(true)}
+                        className="flex items-center justify-center gap-2 w-full px-5 py-3 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
+                      >
+                        ✨ Sugerir rutina automáticamente
                       </button>
-                    ))}
-                    {ejerciciosFiltrados.length === 0 && (
-                      <p className="px-2 py-2 text-xs text-gray-400">Sin resultados</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {ejerciciosPorEtapa.find((e) => e.value === etapaActiva)?.items.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-sm">
-                  Agregá ejercicios con los botones de arriba
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {ejerciciosPorEtapa.find((e) => e.value === etapaActiva)?.items.map((ej) => (
-                    <div key={ej._key} className="bg-gray-50 rounded-xl border border-gray-200 p-3">
-                      <div className="flex items-start gap-2 mb-2">
-                        <GripVertical size={14} className="text-gray-300 mt-1 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <input type="text" value={ej.nombreLibre} onChange={(e) => updateEjercicio(ej._key, "nombreLibre", e.target.value)}
-                            placeholder="Nombre del ejercicio..." required
-                            className="w-full px-2 py-1 text-sm font-medium rounded-lg border border-transparent focus:border-gray-300 focus:outline-none bg-transparent focus:bg-white" />
-                        </div>
-                        <button type="button" onClick={() => removeEjercicio(ej._key)}
-                          className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 shrink-0">
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-
-                      {/* Series/Reps por semana */}
-                      <div className="grid grid-cols-4 gap-2">
-                        {[1, 2, 3, 4].map((s) => (
-                          <div key={s}>
-                            <p className="text-[10px] text-gray-400 font-medium text-center mb-1">Sem {s}</p>
-                            <div className="flex gap-1">
-                              <input type="number" min="1" max="20"
-                                value={ej[`seriesS${s}` as keyof EjercicioRutinaForm] as string}
-                                onChange={(e) => updateEjercicio(ej._key, `seriesS${s}` as keyof EjercicioRutinaForm, e.target.value)}
-                                placeholder="S"
-                                className="w-10 px-1 py-1 text-xs text-center rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
-                              <span className="text-gray-300 text-xs self-center">×</span>
-                              <input type="number" min="1" max="50"
-                                value={ej[`repsS${s}` as keyof EjercicioRutinaForm] as string}
-                                onChange={(e) => updateEjercicio(ej._key, `repsS${s}` as keyof EjercicioRutinaForm, e.target.value)}
-                                placeholder="R"
-                                className="w-10 px-1 py-1 text-xs text-center rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <input type="text" value={ej.notas} onChange={(e) => updateEjercicio(ej._key, "notas", e.target.value)}
-                        placeholder="Notas (carga, progresión...)"
-                        className="mt-2 w-full px-2 py-1 text-xs rounded-lg border border-transparent focus:border-gray-300 focus:outline-none bg-transparent focus:bg-white text-gray-500" />
+                      <button
+                        type="button"
+                        onClick={addEjercicioLibre}
+                        className="flex items-center justify-center gap-2 w-full px-5 py-3 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
+                      >
+                        📝 Armar manualmente
+                      </button>
                     </div>
-                  ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Sidebar etapas */}
+                <div className="w-44 border-r border-gray-100 p-3 shrink-0 overflow-y-auto">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Etapa</p>
+                  {ETAPAS.map((et) => {
+                    const count = ejercicios.filter((e) => e.etapa === et.value).length;
+                    return (
+                      <button key={et.value} type="button" onClick={() => setEtapaActiva(et.value)}
+                        className={`w-full text-left px-2 py-2 rounded-xl text-xs font-medium mb-1 transition-all ${
+                          etapaActiva === et.value ? ETAPA_COLORS[et.value] + " border" : "text-gray-600 hover:bg-gray-50"
+                        }`}>
+                        {et.label}
+                        {count > 0 && <span className="ml-1 text-[10px] opacity-60">({count})</span>}
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
+
+                {/* Lista ejercicios de etapa activa */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-700">
+                      {ETAPAS.find((e) => e.value === etapaActiva)?.label}
+                    </h3>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setShowBiblioteca(true)}
+                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">
+                        <Search size={12} /> Biblioteca
+                      </button>
+                      <button type="button" onClick={addEjercicioLibre}
+                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200">
+                        <Plus size={12} /> Libre
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Buscador biblioteca */}
+                  {showBiblioteca && (
+                    <div className="mb-3 p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <input type="text" value={busquedaEjercicio} onChange={(e) => setBusquedaEjercicio(e.target.value)}
+                          placeholder="Buscar en biblioteca..." autoFocus
+                          className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                        <button type="button" onClick={() => setShowBiblioteca(false)} className="text-gray-400 hover:text-gray-600"><X size={14} /></button>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto divide-y divide-emerald-100">
+                        {ejerciciosFiltrados.slice(0, 10).map((ej) => (
+                          <button key={ej.id} type="button" onClick={() => addDesdebiblioteca(ej)}
+                            className="w-full text-left px-2 py-1.5 text-sm hover:bg-emerald-100 rounded-lg">
+                            <span className="font-medium text-gray-900">{ej.nombre}</span>
+                            {ej.grupo_muscular && <span className="text-gray-500 ml-2 text-xs">{ej.grupo_muscular}</span>}
+                          </button>
+                        ))}
+                        {ejerciciosFiltrados.length === 0 && (
+                          <p className="px-2 py-2 text-xs text-gray-400">Sin resultados</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {ejerciciosPorEtapa.find((e) => e.value === etapaActiva)?.items.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400 text-sm">
+                      Agregá ejercicios desde la biblioteca o escribí uno libre
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {ejerciciosPorEtapa.find((e) => e.value === etapaActiva)?.items.map((ej) => (
+                        <div key={ej._key} className="bg-gray-50 rounded-xl border border-gray-200 p-3">
+                          <div className="flex items-start gap-2 mb-2">
+                            <GripVertical size={14} className="text-gray-300 mt-1 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <input type="text" value={ej.nombreLibre} onChange={(e) => updateEjercicio(ej._key, "nombreLibre", e.target.value)}
+                                placeholder="Nombre del ejercicio..." required
+                                className="w-full px-2 py-1 text-sm font-medium rounded-lg border border-transparent focus:border-gray-300 focus:outline-none bg-transparent focus:bg-white" />
+                            </div>
+                            <button type="button" onClick={() => removeEjercicio(ej._key)}
+                              className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 shrink-0">
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+
+                          {/* Series/Reps por semana */}
+                          <div className="grid grid-cols-4 gap-2">
+                            {[1, 2, 3, 4].map((s) => (
+                              <div key={s}>
+                                <p className="text-[10px] text-gray-400 font-medium text-center mb-1">Sem {s}</p>
+                                <div className="flex gap-1">
+                                  <input type="number" min="1" max="20"
+                                    value={ej[`seriesS${s}` as keyof EjercicioRutinaForm] as string}
+                                    onChange={(e) => updateEjercicio(ej._key, `seriesS${s}` as keyof EjercicioRutinaForm, e.target.value)}
+                                    placeholder="S"
+                                    className="w-10 px-1 py-1 text-xs text-center rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                                  <span className="text-gray-300 text-xs self-center">×</span>
+                                  <input type="number" min="1" max="50"
+                                    value={ej[`repsS${s}` as keyof EjercicioRutinaForm] as string}
+                                    onChange={(e) => updateEjercicio(ej._key, `repsS${s}` as keyof EjercicioRutinaForm, e.target.value)}
+                                    placeholder="R"
+                                    className="w-10 px-1 py-1 text-xs text-center rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <input type="text" value={ej.notas} onChange={(e) => updateEjercicio(ej._key, "notas", e.target.value)}
+                            placeholder="Notas (carga, progresión...)"
+                            className="mt-2 w-full px-2 py-1 text-xs rounded-lg border border-transparent focus:border-gray-300 focus:outline-none bg-transparent focus:bg-white text-gray-500" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Footer */}
@@ -438,11 +474,13 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
                 className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">
                 Cancelar
               </button>
-              <button type="submit" disabled={loading}
-                className="px-5 py-2.5 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors flex items-center gap-2">
-                {loading && <Loader2 size={14} className="animate-spin" />}
-                {editando ? "Guardar cambios" : "Crear rutina"}
-              </button>
+              {(!mostrarSelectorModo || editando) && (
+                <button type="submit" disabled={loading}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors flex items-center gap-2">
+                  {loading && <Loader2 size={14} className="animate-spin" />}
+                  {editando ? "Guardar cambios" : "Crear rutina"}
+                </button>
+              )}
             </div>
           </div>
         </form>
@@ -457,6 +495,14 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
         await cargarMiembros();
         setBusquedaPaciente("");
       }}
+    />
+    <SugerirRutinaModal
+      isOpen={showSugerirModal}
+      onClose={() => setShowSugerirModal(false)}
+      onSuccess={() => { onSuccess(); onClose(); }}
+      pacienteId={pacienteId}
+      pacienteNombre={pacienteNombre}
+      fechaInicio={fechaInicio}
     />
     </>
   );

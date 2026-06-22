@@ -9,17 +9,21 @@ type Ejercicio = {
   nombre: string;
   descripcion: string | null;
   grupo_muscular: string | null;
-  nivel: string;
+  nivel: string | null;
+  niveles: string[] | null;
+  etapas: string[] | null;
   contraindicaciones: string | null;
   imagen_url: string | null;
 };
 
-const NIVEL_COLORS: Record<string, string> = {
-  BAJO: "bg-emerald-50 text-emerald-700",
-  MEDIO: "bg-amber-50 text-amber-700",
-  ALTO: "bg-red-50 text-red-700",
+const NIVEL_BADGE: Record<string, { label: string; color: string }> = {
+  basico: { label: "Básico", color: "bg-emerald-50 text-emerald-700" },
+  intermedio: { label: "Intermedio", color: "bg-amber-50 text-amber-700" },
+  avanzado: { label: "Avanzado", color: "bg-red-50 text-red-700" },
+  BAJO: { label: "Bajo", color: "bg-emerald-50 text-emerald-700" },
+  MEDIO: { label: "Medio", color: "bg-amber-50 text-amber-700" },
+  ALTO: { label: "Alto", color: "bg-red-50 text-red-700" },
 };
-const NIVEL_LABELS: Record<string, string> = { BAJO: "Bajo", MEDIO: "Medio", ALTO: "Alto" };
 
 export default function BibliotecaPage() {
   const [ejercicios, setEjercicios] = useState<Ejercicio[]>([]);
@@ -115,11 +119,16 @@ function EjercicioCard({ ejercicio: ej, onEdit }: { ejercicio: Ejercicio; onEdit
       className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:border-emerald-200 hover:shadow-md transition-all text-left group w-full">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
             <span className="font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors truncate">{ej.nombre}</span>
-            <span className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${NIVEL_COLORS[ej.nivel] ?? ""}`}>
-              {NIVEL_LABELS[ej.nivel] ?? ej.nivel}
-            </span>
+            {(ej.niveles?.length ? ej.niveles : ej.nivel ? [ej.nivel] : []).map((n) => {
+              const badge = NIVEL_BADGE[n];
+              return badge ? (
+                <span key={n} className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${badge.color}`}>
+                  {badge.label}
+                </span>
+              ) : null;
+            })}
           </div>
           {ej.descripcion && <p className="text-xs text-gray-500 line-clamp-2">{ej.descripcion}</p>}
         </div>

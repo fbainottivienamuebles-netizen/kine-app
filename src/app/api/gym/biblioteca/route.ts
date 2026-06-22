@@ -4,11 +4,21 @@ import { getSession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
 import { z } from "zod";
 
+const NIVELES_VALIDOS = ["basico", "intermedio", "avanzado"] as const;
+const ETAPAS_VALIDAS = ["ENTRADA_CALOR", "PRIMERA_ETAPA", "SEGUNDA_ETAPA", "TERCERA_ETAPA", "TRABAJO_FINAL"] as const;
+
+function nivelLegacy(niveles: string[]): string {
+  if (niveles.includes("avanzado")) return "ALTO";
+  if (niveles.includes("intermedio")) return "MEDIO";
+  return "BAJO";
+}
+
 const ejercicioSchema = z.object({
   nombre: z.string().min(1),
   descripcion: z.string().optional().nullable(),
   grupoMuscular: z.string().optional().nullable(),
-  nivel: z.enum(["BAJO","MEDIO","ALTO"]).default("MEDIO"),
+  niveles: z.array(z.enum(NIVELES_VALIDOS)).default(["intermedio"]),
+  etapas: z.array(z.enum(ETAPAS_VALIDAS)).default([]),
   contraindicaciones: z.string().optional().nullable(),
   imagenUrl: z.string().optional().nullable(),
 });
@@ -24,7 +34,7 @@ export async function GET(req: NextRequest) {
   const supabase = createServiceClient();
   let query = supabase
     .from("biblioteca_ejercicios")
-    .select("id, nombre, grupo_muscular, nivel, descripcion, imagen_url")
+    .select("id, nombre, grupo_muscular, nivel, niveles, etapas, descripcion, imagen_url")
     .eq("activo", true)
     .order("nombre", { ascending: true });
 
@@ -44,11 +54,22 @@ export async function POST(req: NextRequest) {
   const parsed = ejercicioSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
-  const { nombre, descripcion, grupoMuscular, nivel, contraindicaciones, imagenUrl } = parsed.data;
+  const { nombre, descripcion, grupoMuscular, niveles, etapas, contraindicaciones, imagenUrl } = parsed.data;
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("biblioteca_ejercicios")
-    .insert({ id: randomUUID(), nombre, descripcion: descripcion || null, grupo_muscular: grupoMuscular || null, nivel, contraindicaciones: contraindicaciones || null, imagen_url: imagenUrl || null, activo: true })
+    .insert({
+      id: randomUUID(),
+      nombre,
+      descripcion: descripcion || null,
+      grupo_muscular: grupoMuscular || null,
+      nivel: nivelLegacy(niveles),
+      niveles,
+      etapas,
+      contraindicaciones: contraindicaciones || null,
+      imagen_url: imagenUrl || null,
+      activo: true,
+    })
     .select()
     .single();
 

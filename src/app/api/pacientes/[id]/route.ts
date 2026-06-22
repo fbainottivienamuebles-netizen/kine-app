@@ -21,6 +21,7 @@ const updateSchema = z.object({
   diasAsignados: z.array(z.enum(["LUNES","MARTES","MIERCOLES","JUEVES","VIERNES","SABADO"])).optional(),
   fechaInicioGym: z.string().optional().nullable(),
   estadoGym: z.enum(["ACTIVO","INACTIVO","VACACIONES"]).optional(),
+  nivelEntrenamiento: z.enum(["basico","intermedio","avanzado"]).optional(),
   activo: z.boolean().optional(),
 });
 
@@ -63,6 +64,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (d.diasAsignados !== undefined) updates.dias_asignados = d.diasAsignados;
   if (d.fechaInicioGym !== undefined) updates.fecha_inicio_gym = d.fechaInicioGym || null;
   if (d.estadoGym !== undefined) updates.estado_gym = d.estadoGym;
+  if (d.nivelEntrenamiento !== undefined) updates.nivel_entrenamiento = d.nivelEntrenamiento;
   if (d.activo !== undefined) updates.activo = d.activo;
 
   const supabase = createServiceClient();

@@ -22,6 +22,7 @@ const pacienteSchema = z.object({
   diasAsignados: z.array(z.enum(["LUNES","MARTES","MIERCOLES","JUEVES","VIERNES","SABADO"])).default([]),
   fechaInicioGym: z.string().optional().or(z.literal("")),
   estadoGym: z.enum(["ACTIVO","INACTIVO","VACACIONES"]).default("ACTIVO"),
+  nivelEntrenamiento: z.enum(["basico","intermedio","avanzado"]).default("basico"),
 });
 
 export async function GET(req: NextRequest) {
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
 
   const { nombre, dni, telefono, email, fechaNacimiento, obraSocial,
     activoKine, nroAfiliado, diagnostico, tratamientos, observaciones,
-    activoGym, contactoEmergencia, observacionesMedicas, diasAsignados, fechaInicioGym, estadoGym } = parsed.data;
+    activoGym, contactoEmergencia, observacionesMedicas, diasAsignados, fechaInicioGym, estadoGym, nivelEntrenamiento } = parsed.data;
 
   const supabase = createServiceClient();
   const { data, error } = await supabase
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
       dias_asignados: diasAsignados,
       fecha_inicio_gym: fechaInicioGym || (activoGym ? new Date().toISOString().slice(0, 10) : null),
       estado_gym: estadoGym,
+      nivel_entrenamiento: nivelEntrenamiento,
       activo: true,
     })
     .select()

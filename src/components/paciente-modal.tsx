@@ -23,6 +23,7 @@ type Paciente = {
   dias_asignados: string[];
   fecha_inicio_gym: string | null;
   estado_gym: string;
+  nivel_entrenamiento?: string;
   activo: boolean;
 };
 
@@ -59,6 +60,7 @@ export function PacienteModal({ isOpen, onClose, onSuccess, paciente, moduloDefa
   const [diasAsignados, setDiasAsignados] = useState<string[]>([]);
   const [fechaInicioGym, setFechaInicioGym] = useState("");
   const [estadoGym, setEstadoGym] = useState("ACTIVO");
+  const [nivelEntrenamiento, setNivelEntrenamiento] = useState("basico");
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -83,6 +85,7 @@ export function PacienteModal({ isOpen, onClose, onSuccess, paciente, moduloDefa
       setDiasAsignados(paciente.dias_asignados ?? []);
       setFechaInicioGym(paciente.fecha_inicio_gym ?? "");
       setEstadoGym(paciente.estado_gym ?? "ACTIVO");
+      setNivelEntrenamiento(paciente.nivel_entrenamiento ?? "basico");
     } else {
       setNombre(""); setDni(""); setTelefono(""); setEmail("");
       setFechaNacimiento(""); setObraSocial("");
@@ -92,6 +95,7 @@ export function PacienteModal({ isOpen, onClose, onSuccess, paciente, moduloDefa
       setContactoEmergencia(""); setObservacionesMedicas(""); setDiasAsignados([]);
       setFechaInicioGym(new Date().toISOString().slice(0, 10));
       setEstadoGym("ACTIVO");
+      setNivelEntrenamiento("basico");
     }
     setError("");
   }, [isOpen, paciente, moduloDefault]);
@@ -117,7 +121,7 @@ export function PacienteModal({ isOpen, onClose, onSuccess, paciente, moduloDefa
         body: JSON.stringify({
           nombre, dni, telefono, email, fechaNacimiento, obraSocial,
           activoKine, nroAfiliado, diagnostico, tratamientos, observaciones,
-          activoGym, contactoEmergencia, observacionesMedicas, diasAsignados, fechaInicioGym, estadoGym,
+          activoGym, contactoEmergencia, observacionesMedicas, diasAsignados, fechaInicioGym, estadoGym, nivelEntrenamiento,
         }),
       });
       const data = await res.json();
@@ -273,6 +277,23 @@ export function PacienteModal({ isOpen, onClose, onSuccess, paciente, moduloDefa
                     <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de inicio</label>
                     <input type="date" value={fechaInicioGym} onChange={(e) => setFechaInicioGym(e.target.value)}
                       className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nivel de entrenamiento</label>
+                    <div className="flex gap-1">
+                      {[
+                        { value: "basico", label: "Básico", active: "bg-emerald-600 text-white border-emerald-600" },
+                        { value: "intermedio", label: "Interm.", active: "bg-amber-500 text-white border-amber-500" },
+                        { value: "avanzado", label: "Avanz.", active: "bg-red-500 text-white border-red-500" },
+                      ].map((n) => (
+                        <button key={n.value} type="button" onClick={() => setNivelEntrenamiento(n.value)}
+                          className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                            nivelEntrenamiento === n.value ? n.active : "bg-white text-gray-600 border-gray-200 hover:bg-gray-100"
+                          }`}>
+                          {n.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <div>

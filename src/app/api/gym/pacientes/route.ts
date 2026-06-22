@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const supabase = createServiceClient();
   let query = supabase
     .from("pacientes")
-    .select("id, nombre, telefono, dias_asignados, fecha_inicio_gym, estado_gym, obra_social, fecha_nacimiento")
+    .select("id, nombre, telefono, dias_asignados, fecha_inicio_gym, estado_gym, obra_social, fecha_nacimiento, nivel_entrenamiento")
     .eq("activo_gym", true)
     .order("nombre", { ascending: true });
 

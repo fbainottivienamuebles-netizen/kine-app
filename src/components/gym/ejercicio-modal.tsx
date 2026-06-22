@@ -8,7 +8,9 @@ type Ejercicio = {
   nombre: string;
   descripcion: string | null;
   grupo_muscular: string | null;
-  nivel: string;
+  nivel: string | null;
+  niveles: string[] | null;
+  etapas: string[] | null;
   contraindicaciones: string | null;
   imagen_url: string | null;
 };
@@ -20,16 +22,26 @@ type Props = {
   ejercicio?: Ejercicio | null;
 };
 
-const NIVELES = [
-  { value: "BAJO", label: "Bajo" },
-  { value: "MEDIO", label: "Medio" },
-  { value: "ALTO", label: "Alto" },
+const NIVELES_OPTS = [
+  { value: "basico", label: "Básico", active: "bg-emerald-600 text-white border-emerald-600" },
+  { value: "intermedio", label: "Intermedio", active: "bg-amber-500 text-white border-amber-500" },
+  { value: "avanzado", label: "Avanzado", active: "bg-red-500 text-white border-red-500" },
+] as const;
+
+const ETAPAS_OPTS = [
+  { value: "ENTRADA_CALOR", label: "Entrada calor" },
+  { value: "PRIMERA_ETAPA", label: "1ª Etapa" },
+  { value: "SEGUNDA_ETAPA", label: "2ª Etapa" },
+  { value: "TERCERA_ETAPA", label: "3ª Etapa" },
+  { value: "TRABAJO_FINAL", label: "Trabajo final" },
 ] as const;
 
 const GRUPOS = [
   "Piernas", "Glúteos", "Espalda", "Pecho", "Hombros", "Brazos",
   "Core", "Cardio", "Full body", "Movilidad",
 ];
+
+const NIVEL_OLD_MAP: Record<string, string> = { BAJO: "basico", MEDIO: "intermedio", ALTO: "avanzado" };
 
 export function EjercicioModal({ isOpen, onClose, onSuccess, ejercicio }: Props) {
   const editando = !!ejercicio;
@@ -38,7 +50,8 @@ export function EjercicioModal({ isOpen, onClose, onSuccess, ejercicio }: Props)
   const [descripcion, setDescripcion] = useState("");
   const [grupoMuscular, setGrupoMuscular] = useState("");
   const [grupoCustom, setGrupoCustom] = useState("");
-  const [nivel, setNivel] = useState("MEDIO");
+  const [niveles, setNiveles] = useState<string[]>(["intermedio"]);
+  const [etapas, setEtapas] = useState<string[]>([]);
   const [contraindicaciones, setContraindicaciones] = useState("");
   const [imagenUrl, setImagenUrl] = useState("");
   const [error, setError] = useState("");
@@ -50,20 +63,36 @@ export function EjercicioModal({ isOpen, onClose, onSuccess, ejercicio }: Props)
       setNombre(ejercicio.nombre);
       setDescripcion(ejercicio.descripcion ?? "");
       const gm = ejercicio.grupo_muscular ?? "";
-      setGrupoMuscular(GRUPOS.includes(gm) ? gm : "otro");
+      setGrupoMuscular(GRUPOS.includes(gm) ? gm : gm ? "otro" : "");
       setGrupoCustom(GRUPOS.includes(gm) ? "" : gm);
-      setNivel(ejercicio.nivel ?? "MEDIO");
+      const nivelesData = ejercicio.niveles?.length
+        ? ejercicio.niveles
+        : ejercicio.nivel
+        ? [NIVEL_OLD_MAP[ejercicio.nivel] ?? "intermedio"]
+        : ["intermedio"];
+      setNiveles(nivelesData);
+      setEtapas(ejercicio.etapas ?? []);
       setContraindicaciones(ejercicio.contraindicaciones ?? "");
       setImagenUrl(ejercicio.imagen_url ?? "");
     } else {
       setNombre(""); setDescripcion(""); setGrupoMuscular(""); setGrupoCustom("");
-      setNivel("MEDIO"); setContraindicaciones(""); setImagenUrl("");
+      setNiveles(["intermedio"]); setEtapas([]); setContraindicaciones(""); setImagenUrl("");
     }
     setError("");
   }, [isOpen, ejercicio]);
 
+  function toggleNivel(n: string) {
+    setNiveles((prev) => prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]);
+  }
+
+  function toggleEtapa(e: string) {
+    setEtapas((prev) => prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (niveles.length === 0) { setError("Seleccioná al menos un nivel"); return; }
+    if (etapas.length === 0) { setError("Seleccioná al menos una etapa donde aplica este ejercicio"); return; }
     setError("");
     setLoading(true);
     const grupoFinal = grupoMuscular === "otro" ? grupoCustom : grupoMuscular;
@@ -73,7 +102,7 @@ export function EjercicioModal({ isOpen, onClose, onSuccess, ejercicio }: Props)
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, descripcion, grupoMuscular: grupoFinal, nivel, contraindicaciones, imagenUrl }),
+        body: JSON.stringify({ nombre, descripcion, grupoMuscular: grupoFinal, niveles, etapas, contraindicaciones, imagenUrl }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Error al guardar"); return; }
@@ -137,17 +166,37 @@ export function EjercicioModal({ isOpen, onClose, onSuccess, ejercicio }: Props)
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nivel</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nivel <span className="text-xs text-gray-400 font-normal">(puede ser más de uno)</span>
+              </label>
               <div className="flex gap-1">
-                {NIVELES.map((n) => (
-                  <button key={n.value} type="button" onClick={() => setNivel(n.value)}
+                {NIVELES_OPTS.map((n) => (
+                  <button key={n.value} type="button" onClick={() => toggleNivel(n.value)}
                     className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                      nivel === n.value ? "bg-emerald-600 text-white border-emerald-600" : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                      niveles.includes(n.value) ? n.active : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
                     }`}>
                     {n.label}
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Etapas donde aplica <span className="text-xs text-gray-400 font-normal">(puede ser más de una)</span>
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {ETAPAS_OPTS.map((et) => (
+                <button key={et.value} type="button" onClick={() => toggleEtapa(et.value)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                    etapas.includes(et.value)
+                      ? "bg-emerald-600 text-white border-emerald-600"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}>
+                  {et.label}
+                </button>
+              ))}
             </div>
           </div>
 
