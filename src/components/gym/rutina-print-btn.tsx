@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import { Printer } from 'lucide-react';
 import type { RutinaForPDF, EjercicioForPDF } from './rutina-pdf';
 
 const ETAPAS = [
@@ -99,19 +97,21 @@ function colHTML(rutina: RutinaForPDF, profesional: string, semana: number, hoy:
     </div>`;
 }
 
-function buildPrintHTML(rutina: RutinaForPDF, profesional: string): string {
-  const semana = semanaCiclo(rutina.fecha_inicio);
+function buildPrintHTML(rutina1: RutinaForPDF, rutina2: RutinaForPDF, profesional: string): string {
+  const semana1 = semanaCiclo(rutina1.fecha_inicio);
+  const semana2 = semanaCiclo(rutina2.fecha_inicio);
   const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const col = colHTML(rutina, profesional, semana, hoy);
+  const col1 = colHTML(rutina1, profesional, semana1, hoy);
+  const col2 = colHTML(rutina2, profesional, semana2, hoy);
 
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Rutina ${rutina.paciente.nombre}</title>
+  <title>Rutinas</title>
   <style>
-    @page { size: A4 landscape; margin: 12mm; }
+    @page { size: A4 landscape; margin: 6mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Helvetica, Arial, sans-serif; font-size: 8pt; color: #1E293B; }
     .page { display: flex; flex-direction: row; }
@@ -126,41 +126,18 @@ function buildPrintHTML(rutina: RutinaForPDF, profesional: string): string {
     </button>
   </div>
   <div class="page">
-    ${col}
+    ${col1}
     <div class="sep"></div>
-    ${col}
+    ${col2}
   </div>
   <script>window.onload = function(){ window.print(); }</script>
 </body>
 </html>`;
 }
 
-export default function RutinaPrintBtn({
-  rutina,
-  profesional,
-}: {
-  rutina: RutinaForPDF;
-  profesional: string;
-}) {
-  const [loading, setLoading] = useState(false);
-
-  function handlePrint() {
-    setLoading(true);
-    const win = window.open('', '_blank');
-    if (!win) { setLoading(false); return; }
-    win.document.write(buildPrintHTML(rutina, profesional));
-    win.document.close();
-    setLoading(false);
-  }
-
-  return (
-    <button
-      onClick={handlePrint}
-      disabled={loading}
-      className="px-3 py-1.5 rounded-xl text-xs font-medium border border-violet-200 text-violet-600 hover:bg-violet-50 transition-colors inline-flex items-center gap-1 cursor-pointer"
-    >
-      <Printer size={12} />
-      Imprimir
-    </button>
-  );
+export function printRutinas(rutina1: RutinaForPDF, rutina2: RutinaForPDF | null, profesional: string): void {
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(buildPrintHTML(rutina1, rutina2 ?? rutina1, profesional));
+  win.document.close();
 }

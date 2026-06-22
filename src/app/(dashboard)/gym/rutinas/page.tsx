@@ -1,14 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import dynamic from "next/dynamic";
-import { Plus, AlertCircle, CheckCircle2, Calendar } from "lucide-react";
+import { Plus, AlertCircle, CheckCircle2, Calendar, Printer, Square, CheckSquare } from "lucide-react";
 import { RutinaEditor } from "@/components/gym/rutina-editor";
-
-const RutinaPrintBtn = dynamic(
-  () => import("@/components/gym/rutina-print-btn"),
-  { ssr: false }
-);
+import { printRutinas } from "@/components/gym/rutina-print-btn";
 
 type EjercicioRutina = {
   id: string;
@@ -70,6 +65,7 @@ export default function RutinasPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [rutinaEdit, setRutinaEdit] = useState<Rutina | null>(null);
   const [profesional, setProfesional] = useState("");
+  const [selectedForPrint, setSelectedForPrint] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -85,6 +81,7 @@ export default function RutinasPage() {
       if (filtroEstado) params.set("estado", filtroEstado);
       const res = await fetch(`/api/gym/rutinas?${params}`);
       setRutinas(await res.json());
+      setSelectedForPrint([]);
     } catch { setRutinas([]); }
     finally { setLoading(false); }
   }, [filtroEstado]);
@@ -97,6 +94,20 @@ export default function RutinasPage() {
     fetchData();
   }
 
+  function toggleSelect(id: string) {
+    setSelectedForPrint(prev =>
+      prev.includes(id)
+        ? prev.filter(x => x !== id)
+        : prev.length < 2 ? [...prev, id] : prev
+    );
+  }
+
+  function handlePrint() {
+    if (selectedForPrint.length === 0) return;
+    const [r1, r2] = selectedForPrint.map(id => rutinas.find(r => r.id === id)!);
+    printRutinas(r1, r2 ?? null, profesional);
+  }
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -104,10 +115,21 @@ export default function RutinasPage() {
           <h1 className="text-2xl font-bold text-gray-900">Rutinas</h1>
           <p className="text-gray-500 text-sm mt-0.5">Ciclos de 4 semanas por miembro</p>
         </div>
-        <button onClick={() => { setRutinaEdit(null); setEditorOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors">
-          <Plus size={16} /> Nueva rutina
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedForPrint.length > 0 && (
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition-colors"
+            >
+              <Printer size={15} />
+              Imprimir ({selectedForPrint.length}/2)
+            </button>
+          )}
+          <button onClick={() => { setRutinaEdit(null); setEditorOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors">
+            <Plus size={16} /> Nueva rutina
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-1 mb-5">
@@ -136,13 +158,28 @@ export default function RutinasPage() {
             const vencePronto = r.estado === "ACTIVA" && dias <= 7 && dias >= 0;
             const vencida = r.estado === "VENCIDA" || dias < 0;
             const isExpanded = expandida === r.id;
+            const isSelected = selectedForPrint.includes(r.id);
+            const maxReached = selectedForPrint.length >= 2 && !isSelected;
 
             return (
               <div key={r.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${
+                isSelected ? "border-violet-400 ring-1 ring-violet-200" :
                 vencePronto ? "border-amber-200" : vencida ? "border-gray-200" : "border-gray-100"
               }`}>
                 <div className="p-4">
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => toggleSelect(r.id)}
+                      disabled={maxReached}
+                      title={maxReached ? "Máximo 2 rutinas para imprimir" : isSelected ? "Deseleccionar" : "Seleccionar para imprimir"}
+                      className={`shrink-0 transition-colors ${maxReached ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
+                    >
+                      {isSelected
+                        ? <CheckSquare size={18} className="text-violet-600" />
+                        : <Square size={18} className="text-gray-400 hover:text-violet-400" />
+                      }
+                    </button>
+
                     <button className="flex-1 text-left" onClick={() => setExpandida(isExpanded ? null : r.id)}>
                       <div className="flex items-center gap-3">
                         <div>
@@ -169,8 +206,8 @@ export default function RutinasPage() {
                         </div>
                       </div>
                     </button>
+
                     <div className="flex gap-2 shrink-0">
-                      <RutinaPrintBtn rutina={r} profesional={profesional} />
                       <button onClick={() => { setRutinaEdit(r); setEditorOpen(true); }}
                         className="px-3 py-1.5 rounded-xl text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                         Editar
