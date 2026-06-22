@@ -13,13 +13,13 @@ type BottomNavProps = { rol: string };
 const MAIN_ITEMS = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/kine/agenda", label: "Agenda", icon: Calendar },
-  { href: "/gym/asistencias", label: "Clases", icon: CheckSquare },
-  { href: "/pacientes", label: "Pacientes", icon: Users },
+  { href: "/gym/rutinas", label: "Rutinas", icon: ClipboardList },
+  { href: "/pacientes", label: "Paciente", icon: Users },
 ];
 
 const MORE_ITEMS = [
+  { href: "/gym/asistencias", label: "Clases", icon: CheckSquare },
   { href: "/kine/cobranza", label: "Cobranza Kine", icon: DollarSign },
-  { href: "/gym/rutinas", label: "Rutinas", icon: ClipboardList },
   { href: "/gym/biblioteca", label: "Biblioteca", icon: BookOpen },
   { href: "/gym/cobranza", label: "Cobranza Gym", icon: DollarSign },
 ];
