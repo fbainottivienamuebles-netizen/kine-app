@@ -42,7 +42,7 @@ function semHeaderRow(semana: number): string {
   return `<tr><td></td>${cells}</tr>`;
 }
 
-function ejercicioRow(ej: EjercicioForPDF, semana: number, etapaBg: string): string {
+function ejercicioRow(ej: EjercicioForPDF, semana: number): string {
   const nombre = ej.ejercicio?.nombre ?? ej.nombre_libre ?? 'Ejercicio';
   const nota = ej.notas
     ? `<div style="font-size:6.5pt;color:#64748B;margin-top:1px;">${ej.notas}</div>`
@@ -55,18 +55,17 @@ function ejercicioRow(ej: EjercicioForPDF, semana: number, etapaBg: string): str
     const sc = SEMANA_COLS[s - 1];
     const style = active
       ? `background:${sc.activeBg};color:${sc.activeText};font-weight:bold;`
-      : `color:#475569;background:${etapaBg};`;
+      : `color:#1E293B;background:#fff;`;
     return `<td style="${style}font-size:8pt;text-align:center;padding:3px 2px;border-radius:2px;">${series ?? '-'}×${reps ?? '-'}</td>`;
   }).join('');
 
   return `
     <tr>
-      <td style="background:${etapaBg};padding:3px 6px;border-radius:2px 0 0 2px;vertical-align:middle;">
+      <td style="background:#fff;padding:3px 6px;vertical-align:middle;border-bottom:0.5pt solid #E2E8F0;">
         <div style="font-weight:bold;font-size:8.5pt;color:#1E293B;">${nombre}</div>${nota}
       </td>
       ${valueCells}
-    </tr>
-    <tr><td colspan="5" style="height:2px;"></td></tr>`;
+    </tr>`;
 }
 
 function colHTML(rutina: RutinaForPDF, profesional: string, semana: number, hoy: string): string {
@@ -76,7 +75,7 @@ function colHTML(rutina: RutinaForPDF, profesional: string, semana: number, hoy:
       .sort((a, b) => a.orden - b.orden);
     if (!items.length) return '';
 
-    const rows = items.map((ej) => ejercicioRow(ej, semana, etapa.bg)).join('');
+    const rows = items.map((ej) => ejercicioRow(ej, semana)).join('');
 
     return `
       <div style="margin-bottom:5pt;">
