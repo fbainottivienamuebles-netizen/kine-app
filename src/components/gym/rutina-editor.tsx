@@ -438,16 +438,16 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
                               <div key={s}>
                                 <p className="text-[10px] text-gray-400 font-medium text-center mb-1">Sem {s}</p>
                                 <div className="flex gap-1">
-                                  <input type="number" min="1" max="20"
-                                    value={ej[`seriesS${s}` as keyof EjercicioRutinaForm] as string}
-                                    onChange={(e) => updateEjercicio(ej._key, `seriesS${s}` as keyof EjercicioRutinaForm, e.target.value)}
-                                    placeholder="S"
-                                    className="w-10 px-1 py-1 text-xs text-center rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
-                                  <span className="text-gray-300 text-xs self-center">×</span>
                                   <input type="number" min="1" max="50"
                                     value={ej[`repsS${s}` as keyof EjercicioRutinaForm] as string}
                                     onChange={(e) => updateEjercicio(ej._key, `repsS${s}` as keyof EjercicioRutinaForm, e.target.value)}
                                     placeholder="R"
+                                    className="w-10 px-1 py-1 text-xs text-center rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                                  <span className="text-gray-300 text-xs self-center">×</span>
+                                  <input type="number" min="1" max="20"
+                                    value={ej[`seriesS${s}` as keyof EjercicioRutinaForm] as string}
+                                    onChange={(e) => updateEjercicio(ej._key, `seriesS${s}` as keyof EjercicioRutinaForm, e.target.value)}
+                                    placeholder="S"
                                     className="w-10 px-1 py-1 text-xs text-center rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
                                 </div>
                               </div>

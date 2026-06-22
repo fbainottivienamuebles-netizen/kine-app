@@ -180,7 +180,7 @@ function RutinaHalf({
                                     : S.wkValText
                                 }
                               >
-                                {series ?? '-'}x{reps ?? '-'}
+                                {reps ?? '-'}x{series ?? '-'}
                               </Text>
                             </View>
                           );

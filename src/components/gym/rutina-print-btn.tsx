@@ -56,7 +56,7 @@ function ejercicioRow(ej: EjercicioForPDF, semana: number): string {
     const style = active
       ? `background:${sc.activeBg};color:${sc.activeText};font-weight:bold;`
       : `color:#1E293B;background:#fff;`;
-    return `<td style="${style}font-size:10pt;text-align:center;padding:3px 2px;border-radius:2px;border-bottom:1.5pt solid #C4B5FD;">${series ?? '-'}×${reps ?? '-'}</td>`;
+    return `<td style="${style}font-size:10pt;text-align:center;padding:3px 2px;border-radius:2px;border-bottom:1.5pt solid #C4B5FD;">${reps ?? '-'}×${series ?? '-'}</td>`;
   }).join('');
 
   return `
