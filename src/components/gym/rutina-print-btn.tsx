@@ -37,7 +37,7 @@ function colgroup(): string {
 function semHeaderRow(semana: number): string {
   const cells = SEMANA_COLS.map((sc, i) => {
     const active = i + 1 === semana;
-    return `<td style="background:${sc.header};color:#fff;font-weight:bold;font-size:7pt;text-align:center;padding:2px 3px;border-radius:2px;">${active ? `S${i + 1}✱` : `S${i + 1}`}</td>`;
+    return `<td style="background:${sc.header};color:#fff;font-weight:bold;font-size:8.5pt;text-align:center;padding:2px 3px;border-radius:2px;">${active ? `S${i + 1}✱` : `S${i + 1}`}</td>`;
   }).join('');
   return `<tr><td></td>${cells}</tr>`;
 }
@@ -45,7 +45,7 @@ function semHeaderRow(semana: number): string {
 function ejercicioRow(ej: EjercicioForPDF, semana: number): string {
   const nombre = ej.ejercicio?.nombre ?? ej.nombre_libre ?? 'Ejercicio';
   const nota = ej.notas
-    ? `<div style="font-size:6.5pt;color:#64748B;margin-top:1px;">${ej.notas}</div>`
+    ? `<div style="font-size:8pt;color:#64748B;margin-top:1px;">${ej.notas}</div>`
     : '';
 
   const valueCells = ([1, 2, 3, 4] as const).map((s) => {
@@ -56,13 +56,13 @@ function ejercicioRow(ej: EjercicioForPDF, semana: number): string {
     const style = active
       ? `background:${sc.activeBg};color:${sc.activeText};font-weight:bold;`
       : `color:#1E293B;background:#fff;`;
-    return `<td style="${style}font-size:8pt;text-align:center;padding:3px 2px;border-radius:2px;">${series ?? '-'}×${reps ?? '-'}</td>`;
+    return `<td style="${style}font-size:10pt;text-align:center;padding:3px 2px;border-radius:2px;border-bottom:1.5pt solid #C4B5FD;">${series ?? '-'}×${reps ?? '-'}</td>`;
   }).join('');
 
   return `
     <tr>
-      <td style="background:#fff;padding:3px 6px;vertical-align:middle;border-bottom:0.5pt solid #E2E8F0;">
-        <div style="font-weight:bold;font-size:8.5pt;color:#1E293B;">${nombre}</div>${nota}
+      <td style="background:#fff;padding:3px 6px;vertical-align:middle;border-bottom:1.5pt solid #C4B5FD;">
+        <div style="font-weight:bold;font-size:10.5pt;color:#1E293B;overflow-wrap:break-word;word-break:break-word;">${nombre}</div>${nota}
       </td>
       ${valueCells}
     </tr>`;
@@ -79,7 +79,7 @@ function colHTML(rutina: RutinaForPDF, profesional: string, semana: number, hoy:
 
     return `
       <div style="margin-bottom:5pt;">
-        <div style="background:${etapa.color};color:#fff;font-weight:bold;font-size:7.5pt;padding:2px 7px;border-radius:2px;margin-bottom:2px;">${etapa.label}</div>
+        <div style="background:${etapa.color};color:#fff;font-weight:bold;font-size:8.5pt;padding:2px 7px;border-radius:2px;margin-bottom:2px;">${etapa.label}</div>
         <table style="width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;">
           ${colgroup()}
           <thead>${semHeaderRow(semana)}</thead>
