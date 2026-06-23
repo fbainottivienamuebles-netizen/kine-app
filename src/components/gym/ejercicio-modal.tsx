@@ -15,11 +15,14 @@ type Ejercicio = {
   imagen_url: string | null;
 };
 
+type CreatedEjercicio = { id: string; nombre: string; grupo_muscular: string | null };
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (created?: CreatedEjercicio) => void;
   ejercicio?: Ejercicio | null;
+  nombreInicial?: string;
 };
 
 const NIVELES_OPTS = [
@@ -43,7 +46,7 @@ const GRUPOS = [
 
 const NIVEL_OLD_MAP: Record<string, string> = { BAJO: "basico", MEDIO: "intermedio", ALTO: "avanzado" };
 
-export function EjercicioModal({ isOpen, onClose, onSuccess, ejercicio }: Props) {
+export function EjercicioModal({ isOpen, onClose, onSuccess, ejercicio, nombreInicial }: Props) {
   const editando = !!ejercicio;
 
   const [nombre, setNombre] = useState("");
@@ -75,7 +78,7 @@ export function EjercicioModal({ isOpen, onClose, onSuccess, ejercicio }: Props)
       setContraindicaciones(ejercicio.contraindicaciones ?? "");
       setImagenUrl(ejercicio.imagen_url ?? "");
     } else {
-      setNombre(""); setDescripcion(""); setGrupoMuscular(""); setGrupoCustom("");
+      setNombre(nombreInicial ?? ""); setDescripcion(""); setGrupoMuscular(""); setGrupoCustom("");
       setNiveles(["intermedio"]); setEtapas([]); setContraindicaciones(""); setImagenUrl("");
     }
     setError("");
@@ -106,7 +109,7 @@ export function EjercicioModal({ isOpen, onClose, onSuccess, ejercicio }: Props)
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Error al guardar"); return; }
-      onSuccess();
+      onSuccess(editando ? undefined : { id: data.id, nombre: data.nombre, grupo_muscular: data.grupo_muscular ?? null });
       onClose();
     } catch {
       setError("Error de conexión");

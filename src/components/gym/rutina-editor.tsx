@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { X, Plus, Trash2, Loader2, Search, GripVertical, UserPlus } from "lucide-react";
 import { PacienteModal } from "@/components/paciente-modal";
 import { SugerirRutinaModal } from "@/components/gym/sugerir-rutina-modal";
+import { EjercicioModal } from "@/components/gym/ejercicio-modal";
 
 type EjercicioBiblioteca = { id: string; nombre: string; grupo_muscular: string | null; nivel: string };
 type PacienteGym = { id: string; nombre: string; dias_asignados: string[] };
@@ -97,17 +98,23 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
   const [loading, setLoading] = useState(false);
   const [showNuevoMiembro, setShowNuevoMiembro] = useState(false);
   const [showSugerirModal, setShowSugerirModal] = useState(false);
+  const [showCrearEjercicio, setShowCrearEjercicio] = useState(false);
+  const [nombreParaCrear, setNombreParaCrear] = useState("");
 
   async function cargarMiembros() {
     fetch("/api/gym/pacientes?estado=ACTIVO")
       .then((r) => r.json()).then(setPacientes).catch(() => setPacientes([]));
   }
 
+  function cargarBiblioteca() {
+    fetch("/api/gym/biblioteca")
+      .then((r) => r.json()).then(setBiblioteca).catch(() => setBiblioteca([]));
+  }
+
   useEffect(() => {
     if (!isOpen) return;
     cargarMiembros();
-    fetch("/api/gym/biblioteca")
-      .then((r) => r.json()).then(setBiblioteca).catch(() => setBiblioteca([]));
+    cargarBiblioteca();
   }, [isOpen]);
 
   useEffect(() => {
@@ -394,6 +401,13 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
                         <input type="text" value={busquedaEjercicio} onChange={(e) => setBusquedaEjercicio(e.target.value)}
                           placeholder="Buscar en biblioteca..." autoFocus
                           className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                        <button
+                          type="button"
+                          onClick={() => { setNombreParaCrear(busquedaEjercicio); setShowCrearEjercicio(true); }}
+                          className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-emerald-700 bg-white border border-emerald-300 rounded-lg hover:bg-emerald-50 whitespace-nowrap"
+                        >
+                          <Plus size={12} /> Crear
+                        </button>
                         <button type="button" onClick={() => setShowBiblioteca(false)} className="text-gray-400 hover:text-gray-600"><X size={14} /></button>
                       </div>
                       <div className="max-h-40 overflow-y-auto divide-y divide-emerald-100">
@@ -405,7 +419,16 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
                           </button>
                         ))}
                         {ejerciciosFiltrados.length === 0 && (
-                          <p className="px-2 py-2 text-xs text-gray-400">Sin resultados</p>
+                          <div className="px-2 py-2 text-center">
+                            <p className="text-xs text-gray-400 mb-1.5">Sin resultados</p>
+                            <button
+                              type="button"
+                              onClick={() => { setNombreParaCrear(busquedaEjercicio); setShowCrearEjercicio(true); }}
+                              className="text-xs font-medium text-emerald-700 hover:text-emerald-900"
+                            >
+                              + Crear{busquedaEjercicio ? ` "${busquedaEjercicio}"` : " nuevo ejercicio"}
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -503,6 +526,17 @@ export function RutinaEditor({ isOpen, onClose, onSuccess, rutina, pacienteInici
       pacienteId={pacienteId}
       pacienteNombre={pacienteNombre}
       fechaInicio={fechaInicio}
+    />
+    <EjercicioModal
+      isOpen={showCrearEjercicio}
+      onClose={() => setShowCrearEjercicio(false)}
+      nombreInicial={nombreParaCrear}
+      onSuccess={(created) => {
+        cargarBiblioteca();
+        if (created) {
+          addDesdebiblioteca({ ...created, nivel: "" });
+        }
+      }}
     />
     </>
   );
