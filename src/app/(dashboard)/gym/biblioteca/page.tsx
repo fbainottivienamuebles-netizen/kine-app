@@ -45,7 +45,10 @@ export default function BibliotecaPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const grupos = [...new Set(ejercicios.map((e) => e.grupo_muscular).filter(Boolean))].sort();
+  const SIN_GRUPO = "Sin clasificar";
+  const grupos = [...new Set(ejercicios.map((e) => e.grupo_muscular || SIN_GRUPO))].sort((a, b) =>
+    a === SIN_GRUPO ? 1 : b === SIN_GRUPO ? -1 : a.localeCompare(b)
+  );
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -86,7 +89,7 @@ export default function BibliotecaPage() {
                 <div key={grupo} className="mb-6">
                   <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">{grupo}</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {ejercicios.filter((e) => e.grupo_muscular === grupo).map((ej) => (
+                    {ejercicios.filter((e) => (e.grupo_muscular || SIN_GRUPO) === grupo).map((ej) => (
                       <EjercicioCard key={ej.id} ejercicio={ej} onEdit={() => { setSeleccionado(ej); setModalOpen(true); }} />
                     ))}
                   </div>
