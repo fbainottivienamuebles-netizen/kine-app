@@ -24,6 +24,8 @@ const NIVELES_PERMITIDOS: Record<string, string[]> = {
   avanzado: ["basico", "intermedio", "avanzado"],
 };
 
+const TODOS_NIVELES = ["basico", "intermedio", "avanzado"];
+
 const ETAPA_LABELS: Record<string, string> = {
   ENTRADA_CALOR: "entrada en calor",
   PRIMERA_ETAPA: "1ª etapa",
@@ -93,17 +95,22 @@ export async function POST(req: NextRequest) {
   for (const etapa of etapasAGenerar) {
     const cantidad = CANTIDAD_POR_ETAPA[etapa] ?? 2;
 
-    // Steps 1 & 2: filter by stage and level
-    const candidatosBase = biblioteca.filter(
-      (e) =>
-        Array.isArray(e.etapas) &&
-        e.etapas.includes(etapa) &&
-        Array.isArray(e.niveles) &&
-        e.niveles.some((n) => nivelesPermitidos.includes(n))
+    // Step 1: filter by stage
+    const enEtapa = biblioteca.filter(
+      (e) => Array.isArray(e.etapas) && e.etapas.includes(etapa) && !yaSeleccionados.has(e.id)
     );
 
-    // Exclude exercises already picked in this suggestion
-    const candidatos = candidatosBase.filter((e) => !yaSeleccionados.has(e.id));
+    // Step 2: filter by patient level. If the preferred levels don't yield enough
+    // exercises, broaden the pool to all levels so the stage isn't left empty
+    // (the library may not have exercises tagged at the patient's exact level).
+    const construirCandidatos = (niveles: string[]) =>
+      enEtapa.filter((e) => Array.isArray(e.niveles) && e.niveles.some((n) => niveles.includes(n)));
+
+    let candidatos = construirCandidatos(nivelesPermitidos);
+    if (candidatos.length < cantidad) {
+      const ampliados = construirCandidatos(TODOS_NIVELES);
+      if (ampliados.length > candidatos.length) candidatos = ampliados;
+    }
 
     // Step 3 & 4: try decreasing history windows
     let seleccionados: typeof candidatos = [];
@@ -135,10 +142,8 @@ export async function POST(req: NextRequest) {
     if (!suficientes) {
       seleccionados = shuffle(candidatos).slice(0, cantidad);
       if (seleccionados.length < cantidad) {
-        const nLabel =
-          nivelPaciente === "basico" ? "Básico" : nivelPaciente === "intermedio" ? "Intermedio" : "Avanzado";
         avisos.push(
-          `No hay suficientes ejercicios de nivel ${nLabel} para ${ETAPA_LABELS[etapa] ?? etapa}. Considerá agregar más ejercicios a la biblioteca.`
+          `No hay suficientes ejercicios cargados para ${ETAPA_LABELS[etapa] ?? etapa}. Considerá agregar más ejercicios a la biblioteca para esa etapa.`
         );
       }
     }
