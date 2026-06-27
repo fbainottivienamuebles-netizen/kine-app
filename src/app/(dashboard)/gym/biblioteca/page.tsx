@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Search, Dumbbell } from "lucide-react";
+import { Plus, Search, Dumbbell, Trash2 } from "lucide-react";
 import { EjercicioModal } from "@/components/gym/ejercicio-modal";
 
 type Ejercicio = {
@@ -44,6 +44,22 @@ export default function BibliotecaPage() {
   }, [busqueda]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleDelete = useCallback(async (ej: Ejercicio) => {
+    if (!confirm(`¿Eliminar "${ej.nombre}" de la biblioteca?`)) return;
+    setEjercicios((prev) => prev.filter((e) => e.id !== ej.id));
+    try {
+      const res = await fetch(`/api/gym/biblioteca/${ej.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activo: false }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      alert("No se pudo eliminar el ejercicio");
+      fetchData();
+    }
+  }, [fetchData]);
 
   const SIN_GRUPO = "Sin clasificar";
   const grupos = [...new Set(ejercicios.map((e) => e.grupo_muscular || SIN_GRUPO))].sort((a, b) =>
@@ -90,7 +106,7 @@ export default function BibliotecaPage() {
                   <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">{grupo}</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {ejercicios.filter((e) => (e.grupo_muscular || SIN_GRUPO) === grupo).map((ej) => (
-                      <EjercicioCard key={ej.id} ejercicio={ej} onEdit={() => { setSeleccionado(ej); setModalOpen(true); }} />
+                      <EjercicioCard key={ej.id} ejercicio={ej} onEdit={() => { setSeleccionado(ej); setModalOpen(true); }} onDelete={() => handleDelete(ej)} />
                     ))}
                   </div>
                 </div>
@@ -98,7 +114,7 @@ export default function BibliotecaPage() {
             : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {ejercicios.map((ej) => (
-                  <EjercicioCard key={ej.id} ejercicio={ej} onEdit={() => { setSeleccionado(ej); setModalOpen(true); }} />
+                  <EjercicioCard key={ej.id} ejercicio={ej} onEdit={() => { setSeleccionado(ej); setModalOpen(true); }} onDelete={() => handleDelete(ej)} />
                 ))}
               </div>
             )
@@ -116,27 +132,32 @@ export default function BibliotecaPage() {
   );
 }
 
-function EjercicioCard({ ejercicio: ej, onEdit }: { ejercicio: Ejercicio; onEdit: () => void }) {
+function EjercicioCard({ ejercicio: ej, onEdit, onDelete }: { ejercicio: Ejercicio; onEdit: () => void; onDelete: () => void }) {
   return (
-    <button onClick={onEdit}
-      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:border-emerald-200 hover:shadow-md transition-all text-left group w-full">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-            <span className="font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors truncate">{ej.nombre}</span>
-            {(ej.niveles?.length ? ej.niveles : ej.nivel ? [ej.nivel] : []).map((n) => {
-              const badge = NIVEL_BADGE[n];
-              return badge ? (
-                <span key={n} className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${badge.color}`}>
-                  {badge.label}
-                </span>
-              ) : null;
-            })}
+    <div className="relative bg-white rounded-2xl border border-gray-100 shadow-sm hover:border-emerald-200 hover:shadow-md transition-all group">
+      <button onClick={onEdit} className="w-full text-left p-4 pr-10">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+              <span className="font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors truncate">{ej.nombre}</span>
+              {(ej.niveles?.length ? ej.niveles : ej.nivel ? [ej.nivel] : []).map((n) => {
+                const badge = NIVEL_BADGE[n];
+                return badge ? (
+                  <span key={n} className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${badge.color}`}>
+                    {badge.label}
+                  </span>
+                ) : null;
+              })}
+            </div>
+            {ej.descripcion && <p className="text-xs text-gray-500 line-clamp-2">{ej.descripcion}</p>}
           </div>
-          {ej.descripcion && <p className="text-xs text-gray-500 line-clamp-2">{ej.descripcion}</p>}
+          <span className="text-xs text-emerald-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Editar →</span>
         </div>
-        <span className="text-xs text-emerald-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Editar →</span>
-      </div>
-    </button>
+      </button>
+      <button onClick={onDelete} title="Eliminar ejercicio" aria-label="Eliminar ejercicio"
+        className="absolute top-2 right-2 p-1.5 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors">
+        <Trash2 size={15} />
+      </button>
+    </div>
   );
 }
