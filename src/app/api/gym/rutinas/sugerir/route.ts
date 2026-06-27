@@ -34,6 +34,58 @@ const ETAPA_LABELS: Record<string, string> = {
   TRABAJO_FINAL: "trabajo final",
 };
 
+// Grupos musculares (tal como se guardan en la biblioteca) que componen cada
+// categoría conceptual del plan de rutina.
+const CATEGORIAS: Record<string, string[]> = {
+  core: ["Core"],
+  pierna: ["Piernas", "Glúteos"],
+  brazo: ["Brazos", "Pecho", "Hombros"],
+  espalda: ["Espalda"],
+  zona_media: ["Core"],
+};
+
+const CATEGORIA_LABEL: Record<string, string> = {
+  core: "core",
+  pierna: "pierna",
+  brazo: "brazo",
+  espalda: "espalda",
+  zona_media: "zona media",
+};
+
+// Plan de slots por etapa. Cada slot define las categorías aceptables (se elige
+// la primera que tenga ejercicios disponibles). { match: i } obliga a usar la
+// MISMA categoría que se eligió en el slot i (ej: 1ª etapa, brazo→brazo / pierna→pierna).
+type SlotSpec = { categorias: string[] } | { match: number };
+
+const PLAN_ETAPAS: Record<string, SlotSpec[]> = {
+  ENTRADA_CALOR: [
+    { categorias: ["core"] },
+    { categorias: ["core"] },
+    { categorias: ["pierna", "brazo"] },
+  ],
+  PRIMERA_ETAPA: [
+    { categorias: ["brazo", "pierna"] },
+    { match: 0 },
+  ],
+  SEGUNDA_ETAPA: [
+    { categorias: ["pierna"] },
+    { categorias: ["core", "espalda"] },
+  ],
+  TERCERA_ETAPA: [
+    { categorias: ["brazo"] },
+    { categorias: ["brazo"] },
+  ],
+  TRABAJO_FINAL: [
+    { categorias: ["brazo"] },
+    { categorias: ["espalda", "zona_media"] },
+  ],
+};
+
+function mismoGrupo(a: string | null, b: string): boolean {
+  if (!a) return false;
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -74,10 +126,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Error al cargar biblioteca" }, { status: 500 });
   }
 
-  const nivelPaciente: string = (pacienteResult.data as any)?.nivel_entrenamiento ?? "basico";
+  const nivelPaciente: string =
+    (pacienteResult.data as { nivel_entrenamiento?: string | null } | null)?.nivel_entrenamiento ?? "basico";
   const nivelesPermitidos = NIVELES_PERMITIDOS[nivelPaciente] ?? ["basico"];
-  const rutinas: Array<{ id: string; ejercicios: Array<{ ejercicio_id: string | null; etapa: string }> }> =
-    (rutinasResult.data as any[]) ?? [];
+  type RutinaHistorial = { id: string; ejercicios: Array<{ ejercicio_id: string | null; etapa: string }> };
+  const rutinas: RutinaHistorial[] = (rutinasResult.data as RutinaHistorial[] | null) ?? [];
   const biblioteca = bibliotecaResult.data as Array<{
     id: string;
     nombre: string;
@@ -93,68 +146,122 @@ export async function POST(req: NextRequest) {
   const yaSeleccionados = new Set<string>(excluirIdsParam);
 
   for (const etapa of etapasAGenerar) {
-    const cantidad = CANTIDAD_POR_ETAPA[etapa] ?? 2;
+    const plan = PLAN_ETAPAS[etapa] ?? [];
+    const cantidad = plan.length || (CANTIDAD_POR_ETAPA[etapa] ?? 2);
 
-    // Step 1: filter by stage
+    // Ejercicios de esta etapa (todavía se filtran por nivel/grupo más abajo).
     const enEtapa = biblioteca.filter(
-      (e) => Array.isArray(e.etapas) && e.etapas.includes(etapa) && !yaSeleccionados.has(e.id)
+      (e) => Array.isArray(e.etapas) && e.etapas.includes(etapa)
     );
 
-    // Step 2: filter by patient level. If the preferred levels don't yield enough
-    // exercises, broaden the pool to all levels so the stage isn't left empty
-    // (the library may not have exercises tagged at the patient's exact level).
-    const construirCandidatos = (niveles: string[]) =>
-      enEtapa.filter((e) => Array.isArray(e.niveles) && e.niveles.some((n) => niveles.includes(n)));
+    // Ids usados en las últimas `ventana` rutinas para esta etapa (para no repetir).
+    const usadosEnVentana = (ventana: number) =>
+      ventana <= 0
+        ? new Set<string>()
+        : new Set<string>(
+            rutinas
+              .slice(0, ventana)
+              .flatMap((r) =>
+                r.ejercicios
+                  .filter((e) => e.etapa === etapa && e.ejercicio_id)
+                  .map((e) => e.ejercicio_id as string)
+              )
+          );
 
-    let candidatos = construirCandidatos(nivelesPermitidos);
-    if (candidatos.length < cantidad) {
-      const ampliados = construirCandidatos(TODOS_NIVELES);
-      if (ampliados.length > candidatos.length) candidatos = ampliados;
+    // Filtra por nivel del paciente; si no alcanza, amplía a todos los niveles
+    // (la biblioteca puede no tener ejercicios al nivel exacto del paciente).
+    const filtrarPorNivel = (pool: typeof biblioteca) => {
+      const preferidos = pool.filter(
+        (e) => Array.isArray(e.niveles) && e.niveles.some((n) => nivelesPermitidos.includes(n))
+      );
+      if (preferidos.length > 0) return preferidos;
+      return pool.filter(
+        (e) => Array.isArray(e.niveles) && e.niveles.some((n) => TODOS_NIVELES.includes(n))
+      );
+    };
+
+    // Elige un ejercicio prefiriendo los no usados en el historial reciente.
+    const elegirUno = (candidatos: typeof biblioteca) => {
+      for (const ventana of [3, 2, 1, 0]) {
+        const usados = usadosEnVentana(ventana);
+        const pool = candidatos.filter((e) => !usados.has(e.id));
+        if (pool.length > 0) return shuffle(pool)[0];
+      }
+      return null;
+    };
+
+    const seleccionados: typeof biblioteca = [];
+    const categoriasElegidas: (string | null)[] = [];
+
+    for (let i = 0; i < plan.length; i++) {
+      const slot = plan[i];
+
+      // Categorías aceptables para este slot (resolviendo dependencias { match }).
+      let categoriasSlot: string[];
+      if ("match" in slot) {
+        const refCat = categoriasElegidas[slot.match];
+        const refSlot = plan[slot.match];
+        categoriasSlot = refCat ? [refCat] : ("categorias" in refSlot ? refSlot.categorias : []);
+      } else {
+        categoriasSlot = slot.categorias;
+      }
+
+      let elegido: (typeof biblioteca)[number] | null = null;
+      let categoriaElegida: string | null = null;
+
+      // Probar cada categoría aceptable (en orden aleatorio) hasta encontrar ejercicio.
+      for (const categoria of shuffle(categoriasSlot)) {
+        const grupos = CATEGORIAS[categoria] ?? [];
+        const candidatos = filtrarPorNivel(
+          enEtapa.filter(
+            (e) =>
+              !yaSeleccionados.has(e.id) &&
+              grupos.some((g) => mismoGrupo(e.grupo_muscular, g))
+          )
+        );
+        const c = elegirUno(candidatos);
+        if (c) {
+          elegido = c;
+          categoriaElegida = categoria;
+          break;
+        }
+      }
+
+      // Fallback: si no hay ejercicios del grupo pedido, completar con cualquiera de la etapa.
+      if (!elegido) {
+        const c = elegirUno(filtrarPorNivel(enEtapa.filter((e) => !yaSeleccionados.has(e.id))));
+        if (c) {
+          elegido = c;
+          if (categoriasSlot.length > 0) {
+            const nombres = categoriasSlot.map((cat) => CATEGORIA_LABEL[cat] ?? cat).join(" o ");
+            avisos.push(
+              `En ${ETAPA_LABELS[etapa] ?? etapa} no hay ejercicios de ${nombres}; se completó con otro grupo.`
+            );
+          }
+        }
+      }
+
+      if (elegido) {
+        seleccionados.push(elegido);
+        categoriasElegidas.push(categoriaElegida);
+        yaSeleccionados.add(elegido.id);
+      } else {
+        categoriasElegidas.push(null);
+      }
     }
 
-    // Step 3 & 4: try decreasing history windows
-    let seleccionados: typeof candidatos = [];
-    let suficientes = false;
-
-    for (const ventana of [3, 2, 1, 0]) {
-      let pool = candidatos;
-
-      if (ventana > 0) {
-        const usadosEnEtapa = new Set<string>(
-          rutinas
-            .slice(0, ventana)
-            .flatMap((r) =>
-              r.ejercicios
-                .filter((e) => e.etapa === etapa && e.ejercicio_id)
-                .map((e) => e.ejercicio_id as string)
-            )
-        );
-        pool = candidatos.filter((e) => !usadosEnEtapa.has(e.id));
-      }
-
-      if (pool.length >= cantidad) {
-        seleccionados = shuffle(pool).slice(0, cantidad);
-        suficientes = true;
-        break;
-      }
-    }
-
-    if (!suficientes) {
-      seleccionados = shuffle(candidatos).slice(0, cantidad);
-      if (seleccionados.length < cantidad) {
-        avisos.push(
-          `No hay suficientes ejercicios cargados para ${ETAPA_LABELS[etapa] ?? etapa}. Considerá agregar más ejercicios a la biblioteca para esa etapa.`
-        );
-      }
+    if (seleccionados.length < cantidad) {
+      avisos.push(
+        `No hay suficientes ejercicios cargados para ${ETAPA_LABELS[etapa] ?? etapa}. Considerá agregar más ejercicios a la biblioteca para esa etapa.`
+      );
     }
 
     rutinaSugerida[etapa] = seleccionados;
-    seleccionados.forEach((e) => yaSeleccionados.add(e.id));
   }
 
   return NextResponse.json({
     rutina: rutinaSugerida,
-    avisos,
+    avisos: [...new Set(avisos)],
     nivelPaciente,
     biblioteca: soloEtapa ? undefined : biblioteca,
   });
