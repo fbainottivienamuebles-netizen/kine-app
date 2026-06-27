@@ -11,10 +11,10 @@ const ETAPAS_ORDENADAS = [
 ] as const;
 
 const CANTIDAD_POR_ETAPA: Record<string, number> = {
-  ENTRADA_CALOR: 2,
+  ENTRADA_CALOR: 3,
   PRIMERA_ETAPA: 2,
   SEGUNDA_ETAPA: 2,
-  TERCERA_ETAPA: 1,
+  TERCERA_ETAPA: 2,
   TRABAJO_FINAL: 2,
 };
 
