@@ -62,6 +62,25 @@ function generarHoras(): string[] {
 
 const HORAS = generarHoras();
 
+const MAX_MIN = 20 * 60; // 20:00, cierre
+
+function aMinutos(hora: string): number {
+  const [h, m] = hora.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function aHora(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+const DURACIONES = [
+  { min: 30, label: "30 min" },
+  { min: 60, label: "1 h" },
+  { min: 90, label: "1 h 30" },
+] as const;
+
 export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, initialHoraInicio, initialHoraFin }: Props) {
   const editando = !!turno;
 
@@ -121,6 +140,21 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
     : pacientes;
 
   const pacienteSeleccionado = pacientes.find((p) => p.id === pacienteId);
+
+  const duracionActual = aMinutos(horaFin) - aMinutos(horaInicio);
+
+  function aplicarDuracion(mins: number) {
+    setHoraFin(aHora(Math.min(aMinutos(horaInicio) + mins, MAX_MIN)));
+  }
+
+  function cambiarInicio(nuevoInicio: string) {
+    setHoraInicio(nuevoInicio);
+    // mantener la duración elegida; si no entra antes del cierre, ajustar a 30 min
+    const dur = duracionActual > 0 ? duracionActual : 60;
+    const inicioMin = aMinutos(nuevoInicio);
+    const finMin = inicioMin + dur <= MAX_MIN ? inicioMin + dur : Math.min(inicioMin + 30, MAX_MIN);
+    setHoraFin(aHora(finMin > inicioMin ? finMin : Math.min(inicioMin + 30, MAX_MIN)));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -252,7 +286,7 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
               <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
               <select
                 value={horaInicio}
-                onChange={(e) => setHoraInicio(e.target.value)}
+                onChange={(e) => cambiarInicio(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {HORAS.filter((h) => h < "20:00").map((h) => (
@@ -271,6 +305,27 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
                   <option key={h} value={h}>{h}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Duración rápida */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Duración</label>
+            <div className="flex gap-2">
+              {DURACIONES.map((d) => (
+                <button
+                  key={d.min}
+                  type="button"
+                  onClick={() => aplicarDuracion(d.min)}
+                  className={`flex-1 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+                    duracionActual === d.min
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
             </div>
           </div>
 
