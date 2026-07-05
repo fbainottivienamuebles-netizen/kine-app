@@ -310,6 +310,57 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
           </div>
         ) : (
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {/* Acciones rápidas de WhatsApp (arriba, sin scrollear en el celular) */}
+          {editando && (
+            <div className="space-y-2 pb-4 border-b border-gray-100">
+              {(() => {
+                const numero = formatearTelefonoAr(pacienteSeleccionado?.telefono);
+                if (!numero) {
+                  return (
+                    <button
+                      type="button"
+                      disabled
+                      title="El paciente no tiene teléfono cargado"
+                      className="w-full flex items-center justify-center gap-2 min-h-[48px] px-5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-400 cursor-not-allowed"
+                    >
+                      <WhatsAppIcon /> Enviar por WhatsApp
+                    </button>
+                  );
+                }
+                return (
+                  <>
+                    <button
+                      type="button"
+                      title="Enviar el recordatorio del turno"
+                      onClick={() => enviarWhatsApp(turno!.id, "recordatorio")}
+                      style={{ backgroundColor: "#25D366" }}
+                      className="w-full flex items-center justify-center gap-2 min-h-[48px] px-5 rounded-xl text-white text-sm font-semibold hover:brightness-95 transition"
+                    >
+                      <WhatsAppIcon /> Enviar recordatorio
+                    </button>
+                    <button
+                      type="button"
+                      title="Reenviar la confirmación del turno"
+                      onClick={() => enviarWhatsApp(turno!.id, "confirmacion")}
+                      className="w-full flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl text-sm font-medium border border-[#25D366] text-[#128C7E] hover:bg-green-50 transition"
+                    >
+                      <WhatsAppIcon size={16} /> Reenviar confirmación
+                    </button>
+                  </>
+                );
+              })()}
+              {turno?.notificado_wa && (
+                <p className="text-xs text-gray-400">
+                  ✓ Notificado por WhatsApp
+                  {turno.notificado_wa_tipo ? ` (${ETIQUETAS_NOTIF[turno.notificado_wa_tipo as TipoNotificacionWa] ?? turno.notificado_wa_tipo})` : ""}
+                  {turno.notificado_wa_at
+                    ? ` — ${new Date(turno.notificado_wa_at).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
+                    : ""}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Paciente */}
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -503,56 +554,6 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
           {error && (
             <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-200">
               {error}
-            </div>
-          )}
-
-          {editando && (
-            <div className="pt-1 space-y-2">
-              {turno?.notificado_wa && (
-                <p className="text-xs text-gray-400 mb-1">
-                  ✓ Notificado por WhatsApp
-                  {turno.notificado_wa_tipo ? ` (${ETIQUETAS_NOTIF[turno.notificado_wa_tipo as TipoNotificacionWa] ?? turno.notificado_wa_tipo})` : ""}
-                  {turno.notificado_wa_at
-                    ? ` — ${new Date(turno.notificado_wa_at).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
-                    : ""}
-                </p>
-              )}
-              {(() => {
-                const numero = formatearTelefonoAr(pacienteSeleccionado?.telefono);
-                if (!numero) {
-                  return (
-                    <button
-                      type="button"
-                      disabled
-                      title="El paciente no tiene teléfono cargado"
-                      className="w-full flex items-center justify-center gap-2 min-h-[48px] px-5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-400 cursor-not-allowed"
-                    >
-                      <WhatsAppIcon /> Enviar por WhatsApp
-                    </button>
-                  );
-                }
-                return (
-                  <>
-                    <button
-                      type="button"
-                      title="Enviar el recordatorio del turno (para el día antes)"
-                      onClick={() => enviarWhatsApp(turno!.id, "recordatorio")}
-                      style={{ backgroundColor: "#25D366" }}
-                      className="w-full flex items-center justify-center gap-2 min-h-[48px] px-5 rounded-xl text-white text-sm font-semibold hover:brightness-95 transition"
-                    >
-                      <WhatsAppIcon /> Enviar recordatorio
-                    </button>
-                    <button
-                      type="button"
-                      title="Reenviar la confirmación del turno"
-                      onClick={() => enviarWhatsApp(turno!.id, "confirmacion")}
-                      className="w-full flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl text-sm font-medium border border-[#25D366] text-[#128C7E] hover:bg-green-50 transition"
-                    >
-                      <WhatsAppIcon size={16} /> Reenviar confirmación
-                    </button>
-                  </>
-                );
-              })()}
             </div>
           )}
 
