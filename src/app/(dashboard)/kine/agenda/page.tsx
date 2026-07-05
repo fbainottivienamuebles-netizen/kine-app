@@ -15,7 +15,10 @@ type Turno = {
   usa_botas: boolean;
   estado: string;
   notas: string | null;
-  paciente: { id: string; nombre: string; dni: string } | null;
+  paciente: { id: string; nombre: string; dni: string; telefono?: string | null } | null;
+  notificado_wa?: boolean | null;
+  notificado_wa_at?: string | null;
+  notificado_wa_tipo?: string | null;
 };
 
 function getRangoSemana(ref: Date): { desde: string; hasta: string } {
@@ -98,7 +101,7 @@ export default function AgendaPage() {
       <TurnoModal
         isOpen={nuevoOpen}
         onClose={() => setNuevoOpen(false)}
-        onSuccess={() => { fetchTurnos(); setNuevoOpen(false); }}
+        onSuccess={() => { fetchTurnos(); }}
       />
     </div>
   );

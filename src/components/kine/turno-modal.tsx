@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Loader2, UserPlus } from "lucide-react";
+import { X, Loader2, UserPlus, CheckCircle2 } from "lucide-react";
 import { ETIQUETAS_TRATAMIENTO, ETIQUETAS_ESTADO_TURNO } from "@/lib/utils";
 import { PacienteModal } from "@/components/paciente-modal";
+import {
+  buildWhatsAppUrl,
+  construirMensajeWa,
+  formatearTelefonoAr,
+  type TipoNotificacionWa,
+} from "@/lib/whatsapp";
 
-type Paciente = { id: string; nombre: string; dni: string | null };
+type Paciente = { id: string; nombre: string; dni: string | null; telefono?: string | null };
 
 type Turno = {
   id: string;
@@ -18,7 +24,26 @@ type Turno = {
   estado: string;
   notas: string | null;
   paciente: Paciente | null;
+  notificado_wa?: boolean | null;
+  notificado_wa_at?: string | null;
+  notificado_wa_tipo?: string | null;
 };
+
+const ETIQUETAS_NOTIF: Record<TipoNotificacionWa, string> = {
+  confirmacion: "confirmación",
+  modificacion: "modificación",
+  cancelacion: "cancelación",
+  recordatorio: "recordatorio",
+};
+
+// Ícono de WhatsApp (lucide no lo trae; SVG oficial simplificado).
+function WhatsAppIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.002-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+    </svg>
+  );
+}
 
 type Props = {
   isOpen: boolean;
@@ -31,11 +56,8 @@ type Props = {
 };
 
 const TRATAMIENTOS = [
-  "MASAJES",
   "REHABILITACION",
-  "DRENAJE_LINFATICO",
   "DRENAJE_BOTAS",
-  "DRENAJE_KINE",
   "HIPOPRESIVOS",
 ] as const;
 
@@ -90,13 +112,15 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
   const [fecha, setFecha] = useState("");
   const [horaInicio, setHoraInicio] = useState("09:00");
   const [horaFin, setHoraFin] = useState("10:00");
-  const [tipo, setTipo] = useState<string>("MASAJES");
+  const [tipo, setTipo] = useState<string>("REHABILITACION");
   const [usaBotas, setUsaBotas] = useState(false);
   const [estado, setEstado] = useState("PENDIENTE");
   const [notas, setNotas] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showNuevoPaciente, setShowNuevoPaciente] = useState(false);
+  // Turno recién guardado + tipo de aviso sugerido → muestra el panel de "enviar por WhatsApp".
+  const [postGuardado, setPostGuardado] = useState<{ id: string; tipo: TipoNotificacionWa } | null>(null);
 
   async function cargarPacientes() {
     fetch("/api/kine/pacientes")
@@ -126,13 +150,14 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
       setFecha(initialDate ?? new Date().toISOString().slice(0, 10));
       setHoraInicio(initialHoraInicio ?? "09:00");
       setHoraFin(initialHoraFin ?? "10:00");
-      setTipo("MASAJES");
+      setTipo("REHABILITACION");
       setUsaBotas(false);
       setEstado("PENDIENTE");
       setNotas("");
     }
     setError("");
     setBusqueda("");
+    setPostGuardado(null);
   }, [isOpen, turno, initialDate, initialHoraInicio, initialHoraFin]);
 
   const pacientesFiltrados = busqueda
@@ -156,6 +181,16 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
     setHoraFin(aHora(finMin > inicioMin ? finMin : Math.min(inicioMin + 30, MAX_MIN)));
   }
 
+  // Detecta qué aviso corresponde según lo que cambió al guardar.
+  function calcularTipoNotif(): TipoNotificacionWa {
+    if (!editando) return "confirmacion";
+    if (estado === "CANCELADO" && turno!.estado !== "CANCELADO") return "cancelacion";
+    const fechaCambio = fecha !== turno!.fecha;
+    const horaCambio = horaInicio !== turno!.hora_inicio.slice(0, 5);
+    if (fechaCambio || horaCambio) return "modificacion";
+    return "confirmacion";
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!pacienteId) { setError("Seleccioná un paciente"); return; }
@@ -171,13 +206,36 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Error al guardar"); return; }
-      onSuccess();
-      onClose();
+      onSuccess(); // refresca la agenda por detrás
+      // No cerramos: mostramos el panel para ofrecer el envío por WhatsApp.
+      setPostGuardado({ id: data.id ?? turno!.id, tipo: calcularTipoNotif() });
     } catch {
       setError("Error de conexión");
     } finally {
       setLoading(false);
     }
+  }
+
+  // Abre wa.me con el mensaje armado y marca el turno como notificado.
+  function enviarWhatsApp(turnoId: string, tipoNotif: TipoNotificacionWa) {
+    const numero = formatearTelefonoAr(pacienteSeleccionado?.telefono);
+    if (!numero || !pacienteSeleccionado) return;
+    const mensaje = construirMensajeWa(tipoNotif, {
+      nombrePaciente: pacienteSeleccionado.nombre,
+      fecha,
+      horaInicio,
+      tipoTratamiento: tipo,
+    });
+    // window.open dentro del gesto de click para evitar el bloqueo de pop-ups.
+    window.open(buildWhatsAppUrl(numero, mensaje), "_blank");
+    // Marcado best-effort: no bloquea la apertura de WhatsApp si falla.
+    fetch(`/api/kine/turnos/${turnoId}/notificar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tipo: tipoNotif }),
+    })
+      .then(() => onSuccess())
+      .catch(() => {});
   }
 
   async function handleEliminar() {
@@ -207,6 +265,50 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
           </button>
         </div>
 
+        {postGuardado ? (
+          <div className="p-5 space-y-4">
+            <div className="flex items-center gap-2 text-green-700">
+              <CheckCircle2 size={20} />
+              <p className="text-sm font-medium">{editando ? "Turno actualizado" : "Turno guardado"}</p>
+            </div>
+            {(() => {
+              const numero = formatearTelefonoAr(pacienteSeleccionado?.telefono);
+              const nombreCorto = pacienteSeleccionado?.nombre.trim().split(/\s+/)[0] ?? "el paciente";
+              if (!numero) {
+                return (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl">
+                    {pacienteSeleccionado?.telefono
+                      ? "El teléfono del paciente no tiene un formato válido para WhatsApp."
+                      : "El paciente no tiene teléfono cargado, no se puede enviar por WhatsApp."}
+                  </div>
+                );
+              }
+              return (
+                <>
+                  <p className="text-sm text-gray-600">
+                    ¿Enviar la {ETIQUETAS_NOTIF[postGuardado.tipo]} del turno por WhatsApp a{" "}
+                    <span className="font-medium text-gray-900">{nombreCorto}</span>?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { enviarWhatsApp(postGuardado.id, postGuardado.tipo); onClose(); }}
+                    style={{ backgroundColor: "#25D366" }}
+                    className="w-full flex items-center justify-center gap-2 min-h-[48px] px-5 rounded-xl text-white text-sm font-semibold hover:brightness-95 transition"
+                  >
+                    <WhatsAppIcon /> Enviar por WhatsApp
+                  </button>
+                </>
+              );
+            })()}
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              Listo
+            </button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* Paciente */}
           <div>
@@ -404,6 +506,56 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
             </div>
           )}
 
+          {editando && (
+            <div className="pt-1 space-y-2">
+              {turno?.notificado_wa && (
+                <p className="text-xs text-gray-400 mb-1">
+                  ✓ Notificado por WhatsApp
+                  {turno.notificado_wa_tipo ? ` (${ETIQUETAS_NOTIF[turno.notificado_wa_tipo as TipoNotificacionWa] ?? turno.notificado_wa_tipo})` : ""}
+                  {turno.notificado_wa_at
+                    ? ` — ${new Date(turno.notificado_wa_at).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
+                    : ""}
+                </p>
+              )}
+              {(() => {
+                const numero = formatearTelefonoAr(pacienteSeleccionado?.telefono);
+                if (!numero) {
+                  return (
+                    <button
+                      type="button"
+                      disabled
+                      title="El paciente no tiene teléfono cargado"
+                      className="w-full flex items-center justify-center gap-2 min-h-[48px] px-5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-400 cursor-not-allowed"
+                    >
+                      <WhatsAppIcon /> Enviar por WhatsApp
+                    </button>
+                  );
+                }
+                return (
+                  <>
+                    <button
+                      type="button"
+                      title="Enviar el recordatorio del turno (para el día antes)"
+                      onClick={() => enviarWhatsApp(turno!.id, "recordatorio")}
+                      style={{ backgroundColor: "#25D366" }}
+                      className="w-full flex items-center justify-center gap-2 min-h-[48px] px-5 rounded-xl text-white text-sm font-semibold hover:brightness-95 transition"
+                    >
+                      <WhatsAppIcon /> Enviar recordatorio
+                    </button>
+                    <button
+                      type="button"
+                      title="Reenviar la confirmación del turno"
+                      onClick={() => enviarWhatsApp(turno!.id, "confirmacion")}
+                      className="w-full flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl text-sm font-medium border border-[#25D366] text-[#128C7E] hover:bg-green-50 transition"
+                    >
+                      <WhatsAppIcon size={16} /> Reenviar confirmación
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
           <div className="flex gap-2 pt-1">
             {editando && (
               <button
@@ -433,6 +585,7 @@ export function TurnoModal({ isOpen, onClose, onSuccess, turno, initialDate, ini
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
     <PacienteModal

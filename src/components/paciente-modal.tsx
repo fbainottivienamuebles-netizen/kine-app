@@ -35,7 +35,7 @@ type Props = {
   moduloDefault?: "kine" | "gym" | null;
 };
 
-const TRATAMIENTOS = ["MASAJES","REHABILITACION","DRENAJE_LINFATICO","DRENAJE_BOTAS","DRENAJE_KINE","HIPOPRESIVOS"] as const;
+const TRATAMIENTOS = ["REHABILITACION","DRENAJE_BOTAS","HIPOPRESIVOS"] as const;
 const ESTADOS_GYM = [{ value: "ACTIVO", label: "Activo" }, { value: "INACTIVO", label: "Inactivo" }, { value: "VACACIONES", label: "Vacaciones" }] as const;
 
 export function PacienteModal({ isOpen, onClose, onSuccess, paciente, moduloDefault }: Props) {

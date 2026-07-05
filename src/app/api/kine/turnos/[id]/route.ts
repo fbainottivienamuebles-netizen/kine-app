@@ -49,7 +49,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     .from("turnos")
     .update(updates)
     .eq("id", id)
-    .select("*, paciente:pacientes(id, nombre, dni)")
+    .select("*, paciente:pacientes(id, nombre, dni, telefono)")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

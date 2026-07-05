@@ -48,7 +48,7 @@ export const ETIQUETAS_TRATAMIENTO: Record<string, string> = {
   MASAJES: "Masajes",
   REHABILITACION: "Rehabilitación",
   DRENAJE_LINFATICO: "Drenaje linfático",
-  DRENAJE_BOTAS: "Drenaje + Botas",
+  DRENAJE_BOTAS: "Botas",
   DRENAJE_KINE: "Drenaje + Kinesiología",
   HIPOPRESIVOS: "Hipopresivos",
 };

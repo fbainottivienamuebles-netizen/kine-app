@@ -26,7 +26,10 @@ type Turno = {
   usa_botas: boolean;
   estado: string;
   notas: string | null;
-  paciente: { id: string; nombre: string; dni: string } | null;
+  paciente: { id: string; nombre: string; dni: string; telefono?: string | null } | null;
+  notificado_wa?: boolean | null;
+  notificado_wa_at?: string | null;
+  notificado_wa_tipo?: string | null;
 };
 
 type CalendarEvent = {
@@ -86,7 +89,10 @@ function EventComponent({ event }: { event: CalendarEvent }) {
   const tipo = event.resource.tipo_tratamiento;
   return (
     <div className="h-full flex flex-col gap-0.5 leading-tight overflow-hidden">
-      <span className="font-semibold text-[11px] truncate">{event.title}</span>
+      <span className="font-semibold text-[11px] truncate">
+        {event.title}
+        {event.resource.notificado_wa && <span title="Notificado por WhatsApp"> · ✓WA</span>}
+      </span>
       <span className="text-[10px] opacity-80 truncate">{ETIQUETAS_TRATAMIENTO[tipo] ?? tipo}</span>
       <span className="text-[10px] opacity-70">{ETIQUETAS_ESTADO_TURNO[event.resource.estado] ?? event.resource.estado}</span>
     </div>
@@ -218,7 +224,7 @@ export function AgendaCalendar({ turnos, onRefresh }: Props) {
       <TurnoModal
         isOpen={modalOpen}
         onClose={handleClose}
-        onSuccess={() => { onRefresh(); handleClose(); }}
+        onSuccess={() => { onRefresh(); }}
         turno={turnoSeleccionado}
         initialDate={slotFecha}
         initialHoraInicio={slotDesde}
